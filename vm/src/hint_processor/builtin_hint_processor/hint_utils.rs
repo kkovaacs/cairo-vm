@@ -260,7 +260,7 @@ mod tests {
 
         assert_matches!(
             get_integer_from_var_name("value", &vm, &ids_data, &ApTracking::new()),
-            Ok(Cow::Borrowed(x)) if x == &Felt252::new(1)
+            Ok(Cow::Owned(x)) if x == Felt252::new(1)
         );
     }
 

@@ -102,7 +102,7 @@ pub(crate) struct MemorySegment {
 
 impl MemorySegment {
     pub fn get(&self, offset: usize) -> Option<MaybeRelocatableRef<'_>> {
-        if self.present[offset] {
+        if self.present.get(offset).map(|b| b == true).unwrap_or(false) {
             match self.cells[offset] {
                 Cell::RelocatableValue(value) => Some(MaybeRelocatableRef::RelocatableValue(value)),
                 Cell::IntIndex(idx) => self.felts.get(idx).map(MaybeRelocatableRef::IntRef),
@@ -173,9 +173,10 @@ impl MemorySegment {
     }
 
     fn try_reserve(&mut self, additional: usize) -> Result<(), std::collections::TryReserveError> {
+        self.cells.try_reserve(additional)?;
         self.present.reserve(additional);
         self.accessed.reserve(additional);
-        self.cells.try_reserve(additional)
+        Ok(())
     }
 
     fn reserve_exact(&mut self, additional: usize) {
@@ -191,7 +192,9 @@ impl MemorySegment {
     }
 
     fn mark_accessed(&mut self, offset: usize) {
-        self.accessed.set(offset, true);
+        if self.present.get(offset).map(|b| b == true).unwrap_or(false) {
+            self.accessed.set(offset, true);
+        }
     }
 
     #[cfg(test)]
@@ -312,6 +315,15 @@ impl<'a> From<MaybeRelocatableRef<'a>> for MaybeRelocatable {
                 MaybeRelocatable::RelocatableValue(relocatable)
             }
             MaybeRelocatableRef::IntRef(int) => MaybeRelocatable::Int(int.clone()),
+        }
+    }
+}
+
+impl<'a> std::fmt::Display for MaybeRelocatableRef<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MaybeRelocatableRef::RelocatableValue(rel) => rel.fmt(f),
+            MaybeRelocatableRef::IntRef(num) => write!(f, "{num}"),
         }
     }
 }
@@ -710,23 +722,21 @@ impl From<&Memory> for CairoPieMemory {
 
 impl fmt::Display for Memory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // for (i, segment) in self.temp_data.iter().enumerate() {
-        //     for (j, cell) in segment.iter().enumerate() {
-        //         if let Some(cell) = cell {
-        //             let temp_segment = i + 1;
-        //             let elem = cell.get_value();
-        //             writeln!(f, "(-{temp_segment},{j}) : {elem}")?;
-        //         }
-        //     }
-        // }
-        // for (i, segment) in self.data.iter().enumerate() {
-        //     for (j, cell) in segment.iter().enumerate() {
-        //         if let Some(cell) = cell {
-        //             let elem = cell.get_value();
-        //             writeln!(f, "({i},{j}) : {elem}")?;
-        //         }
-        //     }
-        // }
+        for (i, segment) in self.temp_data.iter().enumerate() {
+            for (j, cell) in segment.iter().enumerate() {
+                if let Some(elem) = cell {
+                    let temp_segment = i + 1;
+                    writeln!(f, "(-{temp_segment},{j}) : {elem}")?;
+                }
+            }
+        }
+        for (i, segment) in self.data.iter().enumerate() {
+            for (j, cell) in segment.iter().enumerate() {
+                if let Some(elem) = cell {
+                    writeln!(f, "({i},{j}) : {elem}")?;
+                }
+            }
+        }
         writeln!(f, "}}")
     }
 }
