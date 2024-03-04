@@ -421,7 +421,7 @@ impl BuiltinRunner {
         for i in 0..n {
             for j in 0..n_input_cells {
                 let offset = cells_per_instance * i + j;
-                if let None | Some(None) = builtin_segment.get(offset) {
+                if let None = builtin_segment.get(offset) {
                     missing_offsets.push(offset)
                 }
             }
@@ -438,7 +438,7 @@ impl BuiltinRunner {
         for i in 0..n {
             for j in n_input_cells..cells_per_instance {
                 let offset = cells_per_instance * i + j;
-                if let None | Some(None) = builtin_segment.get(offset) {
+                if let None = builtin_segment.get(offset) {
                     vm.verify_auto_deductions_for_addr(
                         Relocatable::from((builtin_segment_index as isize, offset)),
                         self,
@@ -566,6 +566,7 @@ mod tests {
     use crate::types::program::Program;
     use crate::vm::errors::memory_errors::InsufficientAllocatedCellsError;
     use crate::vm::runners::cairo_runner::CairoRunner;
+    use crate::vm::vm_memory::memory::MemorySegment;
     use crate::{
         types::instance_definitions::{
             bitwise_instance_def::BitwiseInstanceDef, ec_op_instance_def::EcOpInstanceDef,
@@ -1206,7 +1207,7 @@ mod tests {
         ));
         let mut vm = vm!();
 
-        vm.segments.memory.data = vec![vec![]];
+        vm.segments.memory.data = vec![MemorySegment::default()];
 
         assert_matches!(builtin.run_security_checks(&vm), Ok(()));
     }
@@ -1352,7 +1353,7 @@ mod tests {
 
         let mut vm = vm!();
 
-        vm.segments.memory.data = vec![vec![None, None, None]];
+        vm.segments.memory.data = vec![MemorySegment::new(&[None, None, None])];
 
         assert_matches!(builtin.run_security_checks(&vm), Ok(()));
     }
@@ -1389,7 +1390,7 @@ mod tests {
 
         let mut vm = vm!();
         // The values stored in memory are not relevant for this test
-        vm.segments.memory.data = vec![vec![]];
+        vm.segments.memory.data = vec![MemorySegment::default()];
 
         assert_matches!(builtin.run_security_checks(&vm), Ok(()));
     }

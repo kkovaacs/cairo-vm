@@ -32,7 +32,9 @@ impl MemorySegmentManager {
 
     ///Adds a new segment and returns its starting location as a Relocatable value. Its segment index will always be positive.
     pub fn add(&mut self) -> Relocatable {
-        self.memory.data.push(Vec::new());
+        self.memory
+            .data
+            .push(super::memory::MemorySegment::default());
         Relocatable {
             segment_index: (self.memory.data.len() - 1) as isize,
             offset: 0,
@@ -41,7 +43,9 @@ impl MemorySegmentManager {
 
     /// Adds a new temporary segment and returns its starting location as a Relocatable value. Its segment index will always be negative.
     pub fn add_temporary_segment(&mut self) -> Relocatable {
-        self.memory.temp_data.push(Vec::new());
+        self.memory
+            .temp_data
+            .push(super::memory::MemorySegment::default());
         Relocatable {
             // We dont substract 1 as we need to take into account the index shift (temporary memory begins from -1 instead of 0)
             segment_index: -((self.memory.temp_data.len()) as isize),
@@ -75,7 +79,7 @@ impl MemorySegmentManager {
     /// Calculates the size of each memory segment.
     pub fn compute_effective_sizes(&mut self) -> &Vec<usize> {
         self.segment_used_sizes
-            .get_or_insert_with(|| self.memory.data.iter().map(Vec::len).collect())
+            .get_or_insert_with(|| self.memory.data.iter().map(|s| s.len()).collect())
     }
 
     ///Returns the number of used segments if they have been computed.
@@ -263,7 +267,7 @@ impl Default for MemorySegmentManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{relocatable, utils::test_utils::*, vm::vm_memory::memory::MemoryCell};
+    use crate::{relocatable, utils::test_utils::*};
     use assert_matches::assert_matches;
     use felt::Felt252;
     use num_traits::Num;
@@ -513,14 +517,11 @@ mod tests {
         let exec = segments.write_arg(ptr, &data);
 
         assert_eq!(exec, Ok(MaybeRelocatable::from((1, 3))));
-        assert_eq!(
-            segments.memory.data[1],
-            vec![
-                Some(MemoryCell::new(mayberelocatable!(11))),
-                Some(MemoryCell::new(mayberelocatable!(12))),
-                Some(MemoryCell::new(mayberelocatable!(1))),
-            ]
-        );
+        segments.memory.data[1].assert_equals(&[
+            Some(mayberelocatable!(11)),
+            Some(mayberelocatable!(12)),
+            Some(mayberelocatable!(1)),
+        ]);
     }
 
     #[test]
@@ -540,14 +541,11 @@ mod tests {
         let exec = segments.write_arg(ptr, &data);
 
         assert_eq!(exec, Ok(MaybeRelocatable::from((1, 3))));
-        assert_eq!(
-            segments.memory.data[1],
-            vec![
-                Some(MemoryCell::new(MaybeRelocatable::from((0, 1)))),
-                Some(MemoryCell::new(MaybeRelocatable::from((0, 2)))),
-                Some(MemoryCell::new(MaybeRelocatable::from((0, 3)))),
-            ]
-        );
+        segments.memory.data[1].assert_equals(&[
+            Some(MaybeRelocatable::from((0, 1))),
+            Some(MaybeRelocatable::from((0, 2))),
+            Some(MaybeRelocatable::from((0, 3))),
+        ]);
     }
 
     #[test]

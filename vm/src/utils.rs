@@ -147,9 +147,11 @@ pub mod test_utils {
                 Err($crate::vm::errors::memory_errors::MemoryError::UnallocatedSegment(_))
             ) {
                 if $si < 0 {
-                    $mem.temp_data.push($crate::stdlib::vec::Vec::new())
+                    $mem.temp_data
+                        .push($crate::vm::vm_memory::memory::MemorySegment::default())
                 } else {
-                    $mem.data.push($crate::stdlib::vec::Vec::new());
+                    $mem.data
+                        .push($crate::vm::vm_memory::memory::MemorySegment::default());
                 }
                 res = $mem.insert(k, v);
             }
@@ -162,9 +164,11 @@ pub mod test_utils {
                 Err($crate::vm::errors::memory_errors::MemoryError::UnallocatedSegment(_))
             ) {
                 if $si < 0 {
-                    $mem.temp_data.push($crate::stdlib::vec::Vec::new())
+                    $mem.temp_data
+                        .push($crate::vm::vm_memory::memory::MemorySegment::default())
                 } else {
-                    $mem.data.push($crate::stdlib::vec::Vec::new());
+                    $mem.data
+                        .push($crate::vm::vm_memory::memory::MemorySegment::default());
                 }
                 res = $mem.insert(k, v);
             }
@@ -604,6 +608,7 @@ mod test {
     use crate::hint_processor::hint_processor_definition::HintProcessorLogic;
     use crate::stdlib::{cell::RefCell, collections::HashMap, rc::Rc, string::String, vec::Vec};
     use crate::types::program::HintsCollection;
+    use crate::vm::vm_memory::memory::MemorySegment;
     use crate::{
         hint_processor::{
             builtin_hint_processor::{
@@ -630,7 +635,7 @@ mod test {
     fn memory_macro_test() {
         let mut memory = Memory::new();
         for _ in 0..2 {
-            memory.data.push(Vec::new());
+            memory.data.push(MemorySegment::default());
         }
         memory
             .insert(
@@ -650,7 +655,7 @@ mod test {
     fn check_memory_macro_test() {
         let mut memory = Memory::new();
         for _ in 0..2 {
-            memory.data.push(Vec::new());
+            memory.data.push(MemorySegment::default());
         }
         memory
             .insert(Relocatable::from((1, 1)), &MaybeRelocatable::from((1, 0)))
@@ -671,7 +676,7 @@ mod test {
     fn check_memory_address_macro_test() {
         let mut memory = Memory::new();
         for _ in 0..2 {
-            memory.data.push(Vec::new());
+            memory.data.push(MemorySegment::default());
         }
         memory
             .insert(Relocatable::from((1, 1)), &MaybeRelocatable::from((1, 0)))

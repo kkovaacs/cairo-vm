@@ -128,10 +128,10 @@ impl RangeCheckBuiltinRunner {
             (!range_check_segment.is_empty()).then_some((usize::MAX, usize::MIN))?;
 
         // Split value into n_parts parts of less than _INNER_RC_BOUND size.
-        for value in range_check_segment {
-            rc_bounds = value
+        for offset in 0..range_check_segment.len() {
+            rc_bounds = range_check_segment
+                .get(offset)
                 .as_ref()?
-                .get_value()
                 .get_int_ref()?
                 .to_le_digits()
                 // TODO: maybe skip leading zeros

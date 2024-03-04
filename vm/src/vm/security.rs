@@ -6,8 +6,8 @@ use super::{
     errors::{runner_errors::RunnerError, vm_errors::VirtualMachineError},
     runners::cairo_runner::CairoRunner,
     vm_core::VirtualMachine,
+    vm_memory::memory::MaybeRelocatableRef,
 };
-use crate::types::relocatable::MaybeRelocatable;
 
 /// Verify that the completed run in a runner is safe to be relocated and be
 /// used by other Cairo programs.
@@ -65,8 +65,8 @@ pub fn verify_secure_runner(
     // Asumption: If temporary memory is empty, this means no temporary memory addresses were generated and all addresses in memory are real
     if !vm.segments.memory.temp_data.is_empty() {
         for value in vm.segments.memory.data.iter().flatten() {
-            match value.as_ref().map(|x| x.get_value()) {
-                Some(MaybeRelocatable::RelocatableValue(addr)) if addr.segment_index < 0 => {
+            match value.as_ref() {
+                Some(MaybeRelocatableRef::RelocatableValue(addr)) if addr.segment_index < 0 => {
                     return Err(VirtualMachineError::InvalidMemoryValueTemporaryAddress(
                         Box::new(*addr),
                     ))

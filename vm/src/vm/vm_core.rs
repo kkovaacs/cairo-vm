@@ -623,12 +623,12 @@ impl VirtualMachine {
                     )
                     .map_err(VirtualMachineError::RunnerError)?
                 {
-                    let value = value.as_ref().map(|x| x.get_value());
-                    if Some(&deduced_memory_cell) != value && value.is_some() {
+                    let value = value.map(|x| x.into());
+                    if Some(&deduced_memory_cell) != value.as_ref() && value.is_some() {
                         return Err(VirtualMachineError::InconsistentAutoDeduction(Box::new((
                             builtin.name(),
                             deduced_memory_cell,
-                            value.cloned(),
+                            value.clone(),
                         ))));
                     }
                 }
@@ -1145,7 +1145,7 @@ mod tests {
     use crate::vm::runners::builtin_runner::{
         BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME,
     };
-    use crate::vm::vm_memory::memory::Memory;
+    use crate::vm::vm_memory::memory::{Memory, MemorySegment};
     use crate::{
         any_box,
         hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -2539,7 +2539,7 @@ mod tests {
             vm.segments.add();
         }
 
-        vm.segments.memory.data.push(Vec::new());
+        vm.segments.memory.data.push(MemorySegment::default());
         let dst_addr = Relocatable::from((1, 0));
         let dst_addr_value = MaybeRelocatable::Int(Felt252::new(5));
         let op0_addr = Relocatable::from((1, 1));
@@ -2598,7 +2598,7 @@ mod tests {
         for _ in 0..2 {
             vm.segments.add();
         }
-        vm.segments.memory.data.push(Vec::new());
+        vm.segments.memory.data.push(MemorySegment::default());
         let dst_addr = relocatable!(1, 0);
         let dst_addr_value = mayberelocatable!(6);
         let op0_addr = relocatable!(1, 1);
@@ -2925,8 +2925,8 @@ mod tests {
         //Check that the following addresses have been accessed:
         // Addresses have been copied from python execution:
         let mem = vm.segments.memory.data;
-        assert!(mem[1][0].as_ref().unwrap().is_accessed());
-        assert!(mem[1][1].as_ref().unwrap().is_accessed());
+        assert!(mem[1].is_accessed(0));
+        assert!(mem[1].is_accessed(1));
     }
 
     #[test]
@@ -3015,15 +3015,15 @@ mod tests {
         //Check that the following addresses have been accessed:
         // Addresses have been copied from python execution:
         let mem = &vm.segments.memory.data;
-        assert!(mem[0][1].as_ref().unwrap().is_accessed());
-        assert!(mem[0][4].as_ref().unwrap().is_accessed());
-        assert!(mem[0][6].as_ref().unwrap().is_accessed());
-        assert!(mem[1][0].as_ref().unwrap().is_accessed());
-        assert!(mem[1][1].as_ref().unwrap().is_accessed());
-        assert!(mem[1][2].as_ref().unwrap().is_accessed());
-        assert!(mem[1][3].as_ref().unwrap().is_accessed());
-        assert!(mem[1][4].as_ref().unwrap().is_accessed());
-        assert!(mem[1][5].as_ref().unwrap().is_accessed());
+        assert!(mem[0].is_accessed(1));
+        assert!(mem[0].is_accessed(4));
+        assert!(mem[0].is_accessed(6));
+        assert!(mem[1].is_accessed(0));
+        assert!(mem[1].is_accessed(1));
+        assert!(mem[1].is_accessed(2));
+        assert!(mem[1].is_accessed(3));
+        assert!(mem[1].is_accessed(4));
+        assert!(mem[1].is_accessed(5));
         assert_eq!(
             vm.segments
                 .memory
@@ -4122,11 +4122,11 @@ mod tests {
         //Check that the following addresses have been accessed:
         // Addresses have been copied from python execution:
         let mem = &vm.segments.memory.data;
-        assert!(mem[0][0].as_ref().unwrap().is_accessed());
-        assert!(mem[0][1].as_ref().unwrap().is_accessed());
-        assert!(mem[0][2].as_ref().unwrap().is_accessed());
-        assert!(mem[0][10].as_ref().unwrap().is_accessed());
-        assert!(mem[1][1].as_ref().unwrap().is_accessed());
+        assert!(mem[0].is_accessed(0));
+        assert!(mem[0].is_accessed(1));
+        assert!(mem[0].is_accessed(2));
+        assert!(mem[0].is_accessed(10));
+        assert!(mem[1].is_accessed(1));
         assert_eq!(
             vm.segments
                 .memory

@@ -16,30 +16,30 @@ pub struct ValidationRule(
     pub  Box<dyn Fn(&Memory, Relocatable) -> Result<Vec<Relocatable>, MemoryError>>,
 );
 
-#[derive(Clone, Eq, Ord, PartialEq, PartialOrd, Debug)]
-pub(crate) struct MemoryCell(MaybeRelocatable, bool);
+// #[derive(Clone, Eq, Ord, PartialEq, PartialOrd, Debug)]
+// pub(crate) struct MemoryCell(MaybeRelocatable, bool);
 
-impl MemoryCell {
-    pub fn new(value: MaybeRelocatable) -> Self {
-        MemoryCell(value, false)
-    }
+// impl MemoryCell {
+//     pub fn new(value: MaybeRelocatable) -> Self {
+//         MemoryCell(value, false)
+//     }
 
-    pub fn mark_accessed(&mut self) {
-        self.1 = true
-    }
+//     pub fn mark_accessed(&mut self) {
+//         self.1 = true
+//     }
 
-    pub fn is_accessed(&self) -> bool {
-        self.1
-    }
+//     pub fn is_accessed(&self) -> bool {
+//         self.1
+//     }
 
-    pub fn get_value(&self) -> &MaybeRelocatable {
-        &self.0
-    }
+//     pub fn get_value(&self) -> &MaybeRelocatable {
+//         &self.0
+//     }
 
-    pub fn get_value_mut(&mut self) -> &mut MaybeRelocatable {
-        &mut self.0
-    }
-}
+//     pub fn get_value_mut(&mut self) -> &mut MaybeRelocatable {
+//         &mut self.0
+//     }
+// }
 
 pub struct AddressSet(Vec<bv::BitVec>);
 
@@ -91,9 +91,268 @@ impl AddressSet {
     }
 }
 
+#[derive(Debug, Default, PartialEq)]
+pub(crate) struct MemorySegment {
+    present: bv::BitVec,
+    cells: Vec<Cell>,
+    accessed: bv::BitVec,
+
+    felts: Felts,
+}
+
+impl MemorySegment {
+    pub fn get(&self, offset: usize) -> Option<MaybeRelocatableRef<'_>> {
+        if self.present[offset] {
+            match self.cells[offset] {
+                Cell::RelocatableValue(value) => Some(MaybeRelocatableRef::RelocatableValue(value)),
+                Cell::IntIndex(idx) => self.felts.get(idx).map(MaybeRelocatableRef::IntRef),
+            }
+        } else {
+            None
+        }
+    }
+
+    fn set(&mut self, offset: usize, val: MaybeRelocatable) -> Result<(), MemorySegmentError> {
+        if self.present[offset] {
+            let equals = match &self.cells[offset] {
+                Cell::RelocatableValue(v) => match &val {
+                    MaybeRelocatable::RelocatableValue(o) => v == o,
+                    MaybeRelocatable::Int(_) => false,
+                },
+                Cell::IntIndex(idx) => match &val {
+                    MaybeRelocatable::RelocatableValue(_) => false,
+                    MaybeRelocatable::Int(felt) => self.felts.get(*idx).unwrap() == felt,
+                },
+            };
+            if !equals {
+                return Err(MemorySegmentError::InconsistentMemory(Box::new((
+                    offset,
+                    self.get(offset).unwrap().clone().into(),
+                    val,
+                ))));
+            }
+        } else {
+            match val {
+                MaybeRelocatable::RelocatableValue(relocatable) => {
+                    self.cells[offset] = Cell::RelocatableValue(relocatable)
+                }
+                MaybeRelocatable::Int(felt) => {
+                    let idx = self.felts.push(felt);
+                    self.cells[offset] = Cell::IntIndex(idx)
+                }
+            }
+
+            self.present.set(offset, true);
+        }
+
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn new(values: &[Option<MaybeRelocatable>]) -> Self {
+        let mut segment = Self::default();
+        segment.resize(values.len());
+        for (offset, value) in values.iter().enumerate() {
+            if let Some(value) = value {
+                segment.set(offset, value.clone()).unwrap();
+            }
+        }
+        segment
+    }
+
+    pub fn len(&self) -> usize {
+        self.cells.len()
+    }
+
+    fn capacity(&self) -> usize {
+        self.cells.capacity()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), std::collections::TryReserveError> {
+        self.present.reserve(additional);
+        self.accessed.reserve(additional);
+        self.cells.try_reserve(additional)
+    }
+
+    fn reserve_exact(&mut self, additional: usize) {
+        self.present.reserve_exact(additional);
+        self.accessed.reserve_exact(additional);
+        self.cells.reserve_exact(additional);
+    }
+
+    fn resize(&mut self, new_len: usize) {
+        self.present.resize(new_len, false);
+        self.accessed.resize(new_len, false);
+        self.cells.resize(new_len, Default::default());
+    }
+
+    fn mark_accessed(&mut self, offset: usize) {
+        self.accessed.set(offset, true);
+    }
+
+    #[cfg(test)]
+    pub fn is_accessed(&self, offset: usize) -> bool {
+        self.accessed
+            .get(offset)
+            .map(|b| b == true)
+            .unwrap_or(false)
+    }
+
+    fn num_accessed(&self) -> usize {
+        self.accessed.count_ones()
+    }
+
+    fn relocate_addresses(&mut self, relocation_rules: &HashMap<usize, Relocatable>) {
+        for i in 0..self.len() {
+            if self.present[i] {
+                match &mut self.cells[i] {
+                    Cell::RelocatableValue(r) => *r = relocate_address(*r, relocation_rules),
+                    Cell::IntIndex(_) => {}
+                }
+            }
+        }
+    }
+
+    fn append_to_pie(&self, segment_index: usize, pie_memory: &mut CairoPieMemory) {
+        for i in 0..self.len() {
+            if let Some(value) = self.get(i) {
+                pie_memory.push(((segment_index, i), value.into()));
+            }
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn assert_equals(&self, values: &[Option<MaybeRelocatable>]) {
+        for (offset, value) in values.iter().enumerate() {
+            assert_eq!(*value, self.get(offset).map(Into::into));
+        }
+    }
+
+    pub fn iter(&self) -> SegmentIter<'_> {
+        SegmentIter {
+            segment: self,
+            index: 0,
+        }
+    }
+}
+
+impl<'a> IntoIterator for &'a MemorySegment {
+    type Item = Option<MaybeRelocatableRef<'a>>;
+
+    type IntoIter = SegmentIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+#[derive(Debug, thiserror_no_std::Error)]
+pub enum MemorySegmentError {
+    #[error("Inconsistent memory assignment at offset {:?}. {:?} != {:?}", (*.0).0, (*.0).1, (*.0).2)]
+    InconsistentMemory(Box<(usize, MaybeRelocatable, MaybeRelocatable)>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum Cell {
+    RelocatableValue(Relocatable),
+    IntIndex(usize),
+}
+
+impl Default for Cell {
+    fn default() -> Self {
+        Self::RelocatableValue(Relocatable {
+            segment_index: 0,
+            offset: 0,
+        })
+    }
+}
+
+#[derive(Debug, Default, PartialEq)]
+struct Felts(Vec<Felt252>);
+
+impl Felts {
+    fn push(&mut self, value: Felt252) -> usize {
+        let index = self.0.len();
+        self.0.push(value);
+        index
+    }
+
+    fn get(&self, index: usize) -> Option<&Felt252> {
+        self.0.get(index)
+    }
+
+    // fn get_mut(&mut self, index: usize) -> Option<&mut Felt252> {
+    //     self.0.get_mut(index)
+    // }
+}
+
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+pub enum MaybeRelocatableRef<'a> {
+    RelocatableValue(Relocatable),
+    IntRef(&'a Felt252),
+}
+
+impl<'a> MaybeRelocatableRef<'a> {
+    pub fn get_int_ref(&self) -> Option<&'a Felt252> {
+        match self {
+            MaybeRelocatableRef::RelocatableValue(_) => None,
+            MaybeRelocatableRef::IntRef(int) => Some(*int),
+        }
+    }
+}
+
+impl<'a> From<MaybeRelocatableRef<'a>> for MaybeRelocatable {
+    fn from(value: MaybeRelocatableRef<'a>) -> Self {
+        match value {
+            MaybeRelocatableRef::RelocatableValue(relocatable) => {
+                MaybeRelocatable::RelocatableValue(relocatable)
+            }
+            MaybeRelocatableRef::IntRef(int) => MaybeRelocatable::Int(int.clone()),
+        }
+    }
+}
+
+pub(crate) struct SegmentIter<'a> {
+    segment: &'a MemorySegment,
+    index: usize,
+}
+
+impl<'a> Iterator for SegmentIter<'a> {
+    type Item = Option<MaybeRelocatableRef<'a>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.segment.len() {
+            return None;
+        }
+        self.index += 1;
+        Some(self.segment.get(self.index - 1))
+    }
+}
+
+// Version of Memory.relocate_value() that doesn't require a self reference
+fn relocate_address(
+    addr: Relocatable,
+    relocation_rules: &HashMap<usize, Relocatable>,
+) -> Relocatable {
+    let segment_idx = addr.segment_index;
+    if segment_idx >= 0 {
+        return addr;
+    }
+
+    // Adjust the segment index to begin at zero, as per the struct field's
+    match relocation_rules.get(&(-(segment_idx + 1) as usize)) {
+        Some(x) => x + addr.offset,
+        None => addr,
+    }
+}
+
 pub struct Memory {
-    pub(crate) data: Vec<Vec<Option<MemoryCell>>>,
-    pub(crate) temp_data: Vec<Vec<Option<MemoryCell>>>,
+    pub(crate) data: Vec<MemorySegment>,
+    pub(crate) temp_data: Vec<MemorySegment>,
     // relocation_rules's keys map to temp_data's indices and therefore begin at
     // zero; that is, segment_index = -1 maps to key 0, -2 to key 1...
     pub(crate) relocation_rules: HashMap<usize, Relocatable>,
@@ -104,8 +363,8 @@ pub struct Memory {
 impl Memory {
     pub fn new() -> Memory {
         Memory {
-            data: Vec::<Vec<Option<MemoryCell>>>::new(),
-            temp_data: Vec::<Vec<Option<MemoryCell>>>::new(),
+            data: Default::default(),
+            temp_data: Default::default(),
             relocation_rules: HashMap::new(),
             validated_addresses: AddressSet::new(),
             validation_rules: Vec::with_capacity(7),
@@ -144,23 +403,15 @@ impl Memory {
             segment
                 .try_reserve(new_len.saturating_sub(capacity))
                 .map_err(|_| MemoryError::VecCapacityExceeded)?;
-            segment.resize(new_len, None);
+            segment.resize(new_len);
         }
         // At this point there's *something* in there
 
-        match segment[value_offset] {
-            None => segment[value_offset] = Some(MemoryCell::new(val)),
-            Some(ref current_cell) => {
-                if current_cell.get_value() != &val {
-                    //Existing memory cannot be changed
-                    return Err(MemoryError::InconsistentMemory(Box::new((
-                        key,
-                        current_cell.get_value().clone(),
-                        val,
-                    ))));
-                }
+        segment.set(value_offset, val).map_err(|e| match e {
+            MemorySegmentError::InconsistentMemory(e) => {
+                MemoryError::InconsistentMemory(Box::new((key, e.1, e.2)))
             }
-        };
+        })?;
         self.validate_memory_cell(key)
     }
 
@@ -177,24 +428,10 @@ impl Memory {
             &self.data
         };
         let (i, j) = from_relocatable_to_indexes(relocatable);
-        Some(self.relocate_value(data.get(i)?.get(j)?.as_ref()?.get_value()))
-    }
-
-    // Version of Memory.relocate_value() that doesn't require a self reference
-    fn relocate_address(
-        addr: Relocatable,
-        relocation_rules: &HashMap<usize, Relocatable>,
-    ) -> MaybeRelocatable {
-        let segment_idx = addr.segment_index;
-        if segment_idx >= 0 {
-            return addr.into();
-        }
-
-        // Adjust the segment index to begin at zero, as per the struct field's
-        match relocation_rules.get(&(-(segment_idx + 1) as usize)) {
-            Some(x) => (x + addr.offset).into(),
-            None => addr.into(),
-        }
+        let segment = data.get(i)?;
+        let value = self.relocate_value(segment.get(j)?);
+        let value: MaybeRelocatable = value.into();
+        Some(Cow::Owned(value))
     }
 
     /// Relocates the memory according to the relocation rules and clears `self.relocaction_rules`.
@@ -204,15 +441,7 @@ impl Memory {
         }
         // Relocate temporary addresses in memory
         for segment in self.data.iter_mut().chain(self.temp_data.iter_mut()) {
-            for cell in segment.iter_mut().flatten() {
-                let value = cell.get_value_mut();
-                match value {
-                    MaybeRelocatable::RelocatableValue(addr) if addr.segment_index < 0 => {
-                        *value = Memory::relocate_address(*addr, &self.relocation_rules);
-                    }
-                    _ => {}
-                }
-            }
+            segment.relocate_addresses(&self.relocation_rules);
         }
         // Move relocated temporary memory into the real memory
         for index in (0..self.temp_data.len()).rev() {
@@ -223,10 +452,9 @@ impl Memory {
                 if let Some(s) = self.data.get_mut(addr.segment_index as usize) {
                     s.reserve_exact(data_segment.len())
                 }
-                for cell in data_segment {
-                    if let Some(cell) = cell {
-                        // Rely on Memory::insert to catch memory inconsistencies
-                        self.insert(addr, cell.get_value())?;
+                for i in 0..data_segment.len() {
+                    if let Some(value) = data_segment.get(i) {
+                        self.insert(addr, value)?;
                     }
                     addr = (addr + 1)?;
                 }
@@ -398,39 +626,8 @@ impl Memory {
         (Ordering::Equal, len)
     }
 
-    /// Compares two ranges of values in memory of length `len`
-    /// Returns the ordering and the first relative position at which they differ
-    /// Special cases:
-    /// - `lhs` exists in memory but `rhs` doesn't -> (Ordering::Greater, 0)
-    /// - `rhs` exists in memory but `lhs` doesn't -> (Ordering::Less, 0)
-    /// - None of `lhs` or `rhs` exist in memory -> (Ordering::Equal, 0)
-    /// Everything else behaves much like `memcmp` in C.
-    /// This is meant as an optimization for hints to avoid allocations.
     pub(crate) fn mem_eq(&self, lhs: Relocatable, rhs: Relocatable, len: usize) -> bool {
-        if lhs == rhs {
-            return true;
-        }
-        let get_segment = |idx: isize| {
-            if idx.is_negative() {
-                self.temp_data.get(-(idx + 1) as usize)
-            } else {
-                self.data.get(idx as usize)
-            }
-        };
-        match (
-            get_segment(lhs.segment_index).and_then(|s| s.get(lhs.offset..)),
-            get_segment(rhs.segment_index).and_then(|s| s.get(rhs.offset..)),
-        ) {
-            (Some(lhs), Some(rhs)) => {
-                let (lhs_len, rhs_len) = (lhs.len().min(len), rhs.len().min(len));
-                if lhs_len != rhs_len {
-                    return false;
-                }
-                lhs[..lhs_len] == rhs[..rhs_len]
-            }
-            (None, None) => true,
-            _ => false,
-        }
+        self.memcmp(lhs, rhs, len) == (Ordering::Equal, len)
     }
 
     /// Gets a range of memory values from addr to addr + size
@@ -488,10 +685,8 @@ impl Memory {
         } else {
             &mut self.data
         };
-        let cell = data.get_mut(i).and_then(|x| x.get_mut(j));
-        if let Some(Some(cell)) = cell {
-            cell.mark_accessed()
-        }
+
+        data.get_mut(i).map(|s| s.mark_accessed(j));
     }
 
     pub fn get_amount_of_accessed_addresses_for_segment(
@@ -499,18 +694,7 @@ impl Memory {
         segment_index: usize,
     ) -> Option<usize> {
         let segment = self.data.get(segment_index)?;
-        Some(
-            segment
-                .iter()
-                .filter(|x| {
-                    if let Some(cell) = x {
-                        cell.is_accessed()
-                    } else {
-                        false
-                    }
-                })
-                .count(),
-        )
+        Some(segment.num_accessed())
     }
 }
 
@@ -518,11 +702,7 @@ impl From<&Memory> for CairoPieMemory {
     fn from(mem: &Memory) -> CairoPieMemory {
         let mut pie_memory = Vec::default();
         for (i, segment) in mem.data.iter().enumerate() {
-            for (j, elem) in segment.iter().enumerate() {
-                if let Some(cell) = elem {
-                    pie_memory.push(((i, j), cell.get_value().clone()))
-                }
-            }
+            segment.append_to_pie(i, &mut pie_memory);
         }
         pie_memory
     }
@@ -530,23 +710,23 @@ impl From<&Memory> for CairoPieMemory {
 
 impl fmt::Display for Memory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (i, segment) in self.temp_data.iter().enumerate() {
-            for (j, cell) in segment.iter().enumerate() {
-                if let Some(cell) = cell {
-                    let temp_segment = i + 1;
-                    let elem = cell.get_value();
-                    writeln!(f, "(-{temp_segment},{j}) : {elem}")?;
-                }
-            }
-        }
-        for (i, segment) in self.data.iter().enumerate() {
-            for (j, cell) in segment.iter().enumerate() {
-                if let Some(cell) = cell {
-                    let elem = cell.get_value();
-                    writeln!(f, "({i},{j}) : {elem}")?;
-                }
-            }
-        }
+        // for (i, segment) in self.temp_data.iter().enumerate() {
+        //     for (j, cell) in segment.iter().enumerate() {
+        //         if let Some(cell) = cell {
+        //             let temp_segment = i + 1;
+        //             let elem = cell.get_value();
+        //             writeln!(f, "(-{temp_segment},{j}) : {elem}")?;
+        //         }
+        //     }
+        // }
+        // for (i, segment) in self.data.iter().enumerate() {
+        //     for (j, cell) in segment.iter().enumerate() {
+        //         if let Some(cell) = cell {
+        //             let elem = cell.get_value();
+        //             writeln!(f, "({i},{j}) : {elem}")?;
+        //         }
+        //     }
+        // }
         writeln!(f, "}}")
     }
 }
@@ -589,6 +769,17 @@ impl<'a> RelocateValue<'a, &'a MaybeRelocatable, Cow<'a, MaybeRelocatable>> for 
     }
 }
 
+impl<'a> RelocateValue<'a, MaybeRelocatableRef<'a>, MaybeRelocatableRef<'a>> for Memory {
+    fn relocate_value(&self, value: MaybeRelocatableRef<'a>) -> MaybeRelocatableRef<'a> {
+        match value {
+            MaybeRelocatableRef::RelocatableValue(addr) => {
+                MaybeRelocatableRef::RelocatableValue(self.relocate_value(addr))
+            }
+            MaybeRelocatableRef::IntRef(_) => value,
+        }
+    }
+}
+
 impl Default for Memory {
     fn default() -> Self {
         Self::new()
@@ -627,7 +818,7 @@ mod memory_tests {
         let key = Relocatable::from((0, 0));
         let val = MaybeRelocatable::from(Felt252::new(5));
         let mut memory = Memory::new();
-        memory.data.push(Vec::new());
+        memory.data.push(MemorySegment::default());
         memory.insert(key, &val).unwrap();
         assert_eq!(
             memory.get(&key).unwrap().as_ref(),
@@ -639,11 +830,11 @@ mod memory_tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn get_valuef_from_temp_segment() {
         let mut memory = Memory::new();
-        memory.temp_data = vec![vec![
+        memory.temp_data = vec![MemorySegment::new(&[
             None,
             None,
-            Some(MemoryCell::new(mayberelocatable!(8))),
-        ]];
+            Some(mayberelocatable!(8)),
+        ])];
         assert_eq!(
             memory.get(&mayberelocatable!(-1, 2)).unwrap().as_ref(),
             &mayberelocatable!(8),
@@ -656,11 +847,11 @@ mod memory_tests {
         let key = Relocatable::from((-1, 3));
         let val = MaybeRelocatable::from(Felt252::new(8));
         let mut memory = Memory::new();
-        memory.temp_data.push(Vec::new());
+        memory.temp_data.push(MemorySegment::default());
         memory.insert(key, &val).unwrap();
         assert_eq!(
-            memory.temp_data[0][3],
-            Some(MemoryCell::new(MaybeRelocatable::from(Felt252::new(8))))
+            memory.temp_data[0].get(3).map(Into::into),
+            Some(MaybeRelocatable::from(Felt252::new(8)))
         );
     }
 
@@ -670,7 +861,7 @@ mod memory_tests {
         let key = Relocatable::from((-1, 0));
         let val = MaybeRelocatable::from(Felt252::new(5));
         let mut memory = Memory::new();
-        memory.temp_data.push(Vec::new());
+        memory.temp_data.push(MemorySegment::default());
         memory.insert(key, &val).unwrap();
         assert_eq!(
             memory.get(&key).unwrap().as_ref(),
@@ -683,7 +874,7 @@ mod memory_tests {
     fn insert_and_get_from_temp_segment_failed() {
         let key = relocatable!(-1, 1);
         let mut memory = Memory::new();
-        memory.temp_data = vec![vec![None, Some(MemoryCell::new(mayberelocatable!(8)))]];
+        memory.temp_data = vec![MemorySegment::new(&[None, Some(mayberelocatable!(8))])];
         assert_eq!(
             memory.insert(key, &mayberelocatable!(5)),
             Err(MemoryError::InconsistentMemory(Box::new((
@@ -730,7 +921,7 @@ mod memory_tests {
         let val_a = MaybeRelocatable::from(Felt252::new(5));
         let val_b = MaybeRelocatable::from(Felt252::new(6));
         let mut memory = Memory::new();
-        memory.data.push(Vec::new());
+        memory.data.push(MemorySegment::default());
         memory
             .insert(key, &val_a)
             .expect("Unexpected memory insert fail");
@@ -750,7 +941,7 @@ mod memory_tests {
         let key_b = Relocatable::from((0, 2));
         let val = MaybeRelocatable::from(Felt252::new(5));
         let mut memory = Memory::new();
-        memory.data.push(Vec::new());
+        memory.data.push(MemorySegment::default());
         memory.insert(key_a, &val).unwrap();
         memory.insert(key_b, &val).unwrap();
         assert_eq!(memory.get(&key_b).unwrap().as_ref(), &val);
@@ -763,7 +954,7 @@ mod memory_tests {
         let key_b = Relocatable::from((0, 5));
         let val = MaybeRelocatable::from(Felt252::new(5));
         let mut memory = Memory::new();
-        memory.data.push(Vec::new());
+        memory.data.push(MemorySegment::default());
         memory.insert(key_a, &val).unwrap();
         memory.insert(key_b, &val).unwrap();
         assert_eq!(memory.get(&key_b).unwrap().as_ref(), &val);
@@ -968,7 +1159,7 @@ mod memory_tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn insert_and_get_temporary_succesful() {
         let mut memory = Memory::new();
-        memory.temp_data.push(Vec::new());
+        memory.temp_data.push(MemorySegment::default());
 
         let key = Relocatable::from((-1, 0));
         let val = MaybeRelocatable::from(Felt252::new(5));
@@ -1183,7 +1374,7 @@ mod memory_tests {
         memory
             .add_relocation_rule((-1, 0).into(), (2, 1).into())
             .unwrap();
-        memory.data.push(vec![]);
+        memory.data.push(MemorySegment::default());
 
         assert_eq!(memory.relocate_memory(), Ok(()));
         check_memory!(
@@ -1218,7 +1409,7 @@ mod memory_tests {
         memory
             .add_relocation_rule((-1, 0).into(), (2, 0).into())
             .unwrap();
-        memory.data.push(vec![]);
+        memory.data.push(MemorySegment::default());
 
         assert_eq!(memory.relocate_memory(), Ok(()));
 
@@ -1343,7 +1534,7 @@ mod memory_tests {
         memory
             .add_relocation_rule((-1, 0).into(), (2, 0).into())
             .unwrap();
-        memory.data.push(vec![]);
+        memory.data.push(MemorySegment::default());
 
         assert_eq!(memory.relocate_memory(), Ok(()));
         check_memory!(
@@ -1378,11 +1569,11 @@ mod memory_tests {
             ((-2, 0), 10),
             ((-2, 1), 11)
         ];
-        memory.data.push(vec![]);
+        memory.data.push(MemorySegment::default());
         memory
             .add_relocation_rule((-1, 0).into(), (2, 0).into())
             .unwrap();
-        memory.data.push(vec![]);
+        memory.data.push(MemorySegment::default());
         memory
             .add_relocation_rule((-2, 0).into(), (3, 0).into())
             .unwrap();
@@ -1472,12 +1663,12 @@ mod memory_tests {
             .unwrap();
 
         assert_eq!(
-            Memory::relocate_address((-1, 0).into(), &memory.relocation_rules),
-            MaybeRelocatable::RelocatableValue((2, 0).into()),
+            relocate_address((-1, 0).into(), &memory.relocation_rules),
+            (2, 0).into(),
         );
         assert_eq!(
-            Memory::relocate_address((-2, 1).into(), &memory.relocation_rules),
-            MaybeRelocatable::RelocatableValue((2, 3).into()),
+            relocate_address((-2, 1).into(), &memory.relocation_rules),
+            (2, 3).into(),
         );
     }
 
@@ -1486,12 +1677,12 @@ mod memory_tests {
     fn relocate_address_no_rules() {
         let memory = Memory::new();
         assert_eq!(
-            Memory::relocate_address((-1, 0).into(), &memory.relocation_rules),
-            MaybeRelocatable::RelocatableValue((-1, 0).into()),
+            relocate_address((-1, 0).into(), &memory.relocation_rules),
+            (-1, 0).into(),
         );
         assert_eq!(
-            Memory::relocate_address((-2, 1).into(), &memory.relocation_rules),
-            MaybeRelocatable::RelocatableValue((-2, 1).into()),
+            relocate_address((-2, 1).into(), &memory.relocation_rules),
+            (-2, 1).into(),
         );
     }
 
@@ -1500,21 +1691,21 @@ mod memory_tests {
     fn relocate_address_real_addr() {
         let memory = Memory::new();
         assert_eq!(
-            Memory::relocate_address((1, 0).into(), &memory.relocation_rules),
-            MaybeRelocatable::RelocatableValue((1, 0).into()),
+            relocate_address((1, 0).into(), &memory.relocation_rules),
+            (1, 0).into(),
         );
         assert_eq!(
-            Memory::relocate_address((1, 1).into(), &memory.relocation_rules),
-            MaybeRelocatable::RelocatableValue((1, 1).into()),
+            relocate_address((1, 1).into(), &memory.relocation_rules),
+            (1, 1).into(),
         );
     }
 
     #[test]
     fn mark_address_as_accessed() {
         let mut memory = memory![((0, 0), 0)];
-        assert!(!memory.data[0][0].as_ref().unwrap().is_accessed());
+        assert!(!memory.data[0].is_accessed(0));
         memory.mark_as_accessed(relocatable!(0, 0));
-        assert!(memory.data[0][0].as_ref().unwrap().is_accessed());
+        assert!(memory.data[0].is_accessed(0));
     }
 
     #[test]
@@ -1535,34 +1726,6 @@ mod memory_tests {
     fn get_amount_of_accessed_addresses_for_segment_invalid_segment() {
         let memory = memory![((0, 0), 0)];
         assert_eq!(memory.get_amount_of_accessed_addresses_for_segment(1), None);
-    }
-
-    #[test]
-    fn memory_cell_new_is_not_accessed() {
-        let cell = MemoryCell::new(mayberelocatable!(1));
-        assert!(!cell.is_accessed())
-    }
-
-    #[test]
-    fn memory_cell_mark_accessed() {
-        let mut cell = MemoryCell::new(mayberelocatable!(1));
-        cell.mark_accessed();
-        assert!(cell.is_accessed())
-    }
-
-    #[test]
-    fn memory_cell_get_value() {
-        let cell = MemoryCell::new(mayberelocatable!(1));
-        assert_eq!(cell.get_value(), &mayberelocatable!(1));
-    }
-
-    #[test]
-    fn memory_cell_mutate_value() {
-        let mut cell = MemoryCell::new(mayberelocatable!(1));
-        let cell_value = cell.get_value_mut();
-        assert_eq!(cell_value, &mayberelocatable!(1));
-        *cell_value = mayberelocatable!(2);
-        assert_eq!(cell.get_value(), &mayberelocatable!(2));
     }
 
     use core::cmp::Ordering::*;
