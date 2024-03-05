@@ -1551,7 +1551,7 @@ mod tests {
         //This test works with basic Program definition, will later be updated to use Program::new() when fully defined
         let program = program!(
             builtins = vec![BuiltinName::output],
-            data = vec_data!((4), (6)),
+            data = vec![felt_str!("4"), felt_str!("6")],
         );
         let mut cairo_runner = cairo_runner!(program);
         let mut vm = vm!();
@@ -1823,19 +1823,19 @@ mod tests {
     */
     fn initialization_phase_no_builtins() {
         let program = program!(
-            data = vec_data!(
-                (5207990763031199744_u64),
-                (2),
-                (2345108766317314046_u64),
-                (5189976364521848832_u64),
-                (1),
-                (1226245742482522112_u64),
-                ((
+            data = vec![
+                felt_str!("5207990763031199744"),
+                felt_str!("2"),
+                felt_str!("2345108766317314046"),
+                felt_str!("5189976364521848832"),
+                felt_str!("1"),
+                felt_str!("1226245742482522112"),
+                felt_str!(
                     "3618502788666131213697322783095070105623107215331596699973092056135872020476",
                     10
-                )),
-                (2345108766317314046_i64)
-            ),
+                ),
+                felt_str!("2345108766317314046"),
+            ],
             main = Some(3),
         );
         let mut cairo_runner = cairo_runner!(program);
@@ -1894,21 +1894,21 @@ mod tests {
     fn initialization_phase_output_builtin() {
         let program = program!(
             builtins = vec![BuiltinName::output],
-            data = vec_data!(
-                (4612671182993129469_u64),
-                (5198983563776393216_u64),
-                (1),
-                (2345108766317314046_u64),
-                (5191102247248822272_u64),
-                (5189976364521848832_u64),
-                (1),
-                (1226245742482522112_u64),
-                ((
+            data = vec![
+                felt_str!("4612671182993129469"),
+                felt_str!("5198983563776393216"),
+                felt_str!("1"),
+                felt_str!("2345108766317314046"),
+                felt_str!("5191102247248822272"),
+                felt_str!("5189976364521848832"),
+                felt_str!("1"),
+                felt_str!("1226245742482522112"),
+                felt_str!(
                     "3618502788666131213697322783095070105623107215331596699973092056135872020474",
                     10
-                )),
-                (2345108766317314046_u64)
-            ),
+                ),
+                felt_str!("2345108766317314046"),
+            ],
             main = Some(4),
         );
         let mut cairo_runner = cairo_runner!(program);
@@ -1978,25 +1978,25 @@ mod tests {
     fn initialization_phase_range_check_builtin() {
         let program = program!(
             builtins = vec![BuiltinName::range_check],
-            data = vec_data!(
-                (4612671182993129469_u64),
-                (5189976364521848832_u64),
-                (18446744073709551615_u128),
-                (5199546496550207487_u64),
-                (4612389712311386111_u64),
-                (5198983563776393216_u64),
-                (2),
-                (2345108766317314046_u64),
-                (5191102247248822272_u64),
-                (5189976364521848832_u64),
-                (7),
-                (1226245742482522112_u64),
-                ((
+            data = vec![
+                felt_str!("4612671182993129469"),
+                felt_str!("5189976364521848832"),
+                felt_str!("18446744073709551615"),
+                felt_str!("5199546496550207487"),
+                felt_str!("4612389712311386111"),
+                felt_str!("5198983563776393216"),
+                felt_str!("2"),
+                felt_str!("2345108766317314046"),
+                felt_str!("5191102247248822272"),
+                felt_str!("5189976364521848832"),
+                felt_str!("7"),
+                felt_str!("1226245742482522112"),
+                felt_str!(
                     "3618502788666131213697322783095070105623107215331596699973092056135872020474",
                     10
-                )),
-                (2345108766317314046_u64)
-            ),
+                ),
+                felt_str!("2345108766317314046"),
+            ],
             main = Some(8),
         );
 
@@ -2068,19 +2068,19 @@ mod tests {
     fn initialize_and_run_function_call() {
         //Initialization Phase
         let program = program!(
-            data = vec_data!(
-                (5207990763031199744_i64),
-                (2),
-                (2345108766317314046_i64),
-                (5189976364521848832_i64),
-                (1),
-                (1226245742482522112_i64),
-                ((
+            data = vec![
+                felt_str!("5207990763031199744"),
+                felt_str!("2"),
+                felt_str!("2345108766317314046"),
+                felt_str!("5189976364521848832"),
+                felt_str!("1"),
+                felt_str!("1226245742482522112"),
+                felt_str!(
                     "3618502788666131213697322783095070105623107215331596699973092056135872020476",
                     10
-                )),
-                (2345108766317314046_i64)
-            ),
+                ),
+                felt_str!("2345108766317314046")
+            ],
             main = Some(3),
         );
         let mut hint_processor = BuiltinHintProcessor::new_empty();
@@ -2138,25 +2138,25 @@ mod tests {
         //Initialization Phase
         let program = program!(
             builtins = vec![BuiltinName::range_check],
-            data = vec_data!(
-                (4612671182993129469_i64),
-                (5189976364521848832_i64),
-                (18446744073709551615_i128),
-                (5199546496550207487_i64),
-                (4612389712311386111_i64),
-                (5198983563776393216_i64),
-                (2),
-                (2345108766317314046_i64),
-                (5191102247248822272_i64),
-                (5189976364521848832_i64),
-                (7),
-                (1226245742482522112_i64),
-                ((
-                    "3618502788666131213697322783095070105623107215331596699973092056135872020470",
+            data = vec![
+                felt_str!("4612671182993129469"),
+                felt_str!("5189976364521848832"),
+                felt_str!("18446744073709551615"),
+                felt_str!("5199546496550207487"),
+                felt_str!("4612389712311386111"),
+                felt_str!("5198983563776393216"),
+                felt_str!("2"),
+                felt_str!("2345108766317314046"),
+                felt_str!("5191102247248822272"),
+                felt_str!("5189976364521848832"),
+                felt_str!("7"),
+                felt_str!("1226245742482522112"),
+                felt_str!(
+                    "3618502788666131213697322783095070105623107215331596699973092056135872020474",
                     10
-                )),
-                (2345108766317314046_i64)
-            ),
+                ),
+                felt_str!("2345108766317314046"),
+            ],
             main = Some(8),
         );
         let mut hint_processor = BuiltinHintProcessor::new_empty();
@@ -2250,28 +2250,28 @@ mod tests {
         //Initialization Phase
         let program = program!(
             builtins = vec![BuiltinName::output],
-            data = vec_data!(
-                (4612671182993129469_i64),
-                (5198983563776393216_i64),
-                (1),
-                (2345108766317314046_i64),
-                (5191102247248822272_i64),
-                (5189976364521848832_i64),
-                (1),
-                (1226245742482522112_i64),
-                ((
+            data = vec![
+                felt_str!("4612671182993129469"),
+                felt_str!("5198983563776393216"),
+                felt_str!("1"),
+                felt_str!("2345108766317314046"),
+                felt_str!("5191102247248822272"),
+                felt_str!("5189976364521848832"),
+                felt_str!("1"),
+                felt_str!("1226245742482522112"),
+                felt_str!(
                     "3618502788666131213697322783095070105623107215331596699973092056135872020474",
                     10
-                )),
-                (5189976364521848832_i64),
-                (17),
-                (1226245742482522112_i64),
-                ((
+                ),
+                felt_str!("5189976364521848832"),
+                felt_str!("17"),
+                felt_str!("1226245742482522112"),
+                felt_str!(
                     "3618502788666131213697322783095070105623107215331596699973092056135872020470",
                     10
-                )),
-                (2345108766317314046_i64)
-            ),
+                ),
+                felt_str!("2345108766317314046")
+            ],
             main = Some(4),
         );
         let mut hint_processor = BuiltinHintProcessor::new_empty();
@@ -2380,36 +2380,36 @@ mod tests {
         let program = program!(
             builtins = vec![BuiltinName::output, BuiltinName::range_check],
             data = vec_data!(
-                (4612671182993129469_i64),
-                (5198983563776393216_i64),
-                (1),
-                (2345108766317314046_i64),
-                (4612671182993129469_i64),
-                (5189976364521848832_i64),
-                (18446744073709551615_i128),
-                (5199546496550207487_i64),
-                (4612389712311386111_i64),
-                (5198983563776393216_i64),
-                (2),
-                (5191102247248822272_i64),
-                (2345108766317314046_i64),
-                (5191102247248822272_i64),
-                (5189976364521848832_i64),
-                (7),
-                (1226245742482522112_i64),
+                ("4612671182993129469"),
+                ("5198983563776393216"),
+                ("1"),
+                ("2345108766317314046"),
+                ("4612671182993129469"),
+                ("5189976364521848832"),
+                ("18446744073709551615"),
+                ("5199546496550207487"),
+                ("4612389712311386111"),
+                ("5198983563776393216"),
+                ("2"),
+                ("5191102247248822272"),
+                ("2345108766317314046"),
+                ("5191102247248822272"),
+                ("5189976364521848832"),
+                ("7"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020469",
                     10
                 )),
-                (5191102242953854976_i64),
-                (5193354051357474816_i64),
-                (1226245742482522112_i64),
+                ("5191102242953854976"),
+                ("5193354051357474816"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020461",
                     10
                 )),
-                (5193354029882638336_i64),
-                (2345108766317314046_i64)
+                ("5193354029882638336"),
+                ("2345108766317314046")
             ),
             main = Some(13),
         );
@@ -2628,26 +2628,26 @@ mod tests {
         let program = program!(
             builtins = vec![BuiltinName::output],
             data = vec_data!(
-                (4612671182993129469_i64),
-                (5198983563776393216_i64),
-                (1),
-                (2345108766317314046_i64),
-                (5191102247248822272_i64),
-                (5189976364521848832_i64),
-                (1),
-                (1226245742482522112_i64),
+                ("4612671182993129469"),
+                ("5198983563776393216"),
+                ("1"),
+                ("2345108766317314046"),
+                ("5191102247248822272"),
+                ("5189976364521848832"),
+                ("1"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020474",
                     10
                 )),
-                (5189976364521848832_i64),
-                (17),
-                (1226245742482522112_i64),
+                ("5189976364521848832"),
+                ("17"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020470",
                     10
                 )),
-                (2345108766317314046_i64)
+                ("2345108766317314046")
             ),
             main = Some(4),
         );
@@ -2767,26 +2767,26 @@ mod tests {
         let program = program!(
             builtins = vec![BuiltinName::output],
             data = vec_data!(
-                (4612671182993129469_i64),
-                (5198983563776393216_i64),
-                (1),
-                (2345108766317314046_i64),
-                (5191102247248822272_i64),
-                (5189976364521848832_i64),
-                (1),
-                (1226245742482522112_i64),
+                ("4612671182993129469"),
+                ("5198983563776393216"),
+                ("1"),
+                ("2345108766317314046"),
+                ("5191102247248822272"),
+                ("5189976364521848832"),
+                ("1"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020474",
                     10
                 )),
-                (5189976364521848832_i64),
-                (17),
-                (1226245742482522112_i64),
+                ("5189976364521848832"),
+                ("17"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020470",
                     10
                 )),
-                (2345108766317314046_i64)
+                ("2345108766317314046")
             ),
             main = Some(4),
         );
@@ -2943,26 +2943,26 @@ mod tests {
         let program = program!(
             builtins = vec![BuiltinName::output],
             data = vec_data!(
-                (4612671182993129469_i64),
-                (5198983563776393216_i64),
-                (1),
-                (2345108766317314046_i64),
-                (5191102247248822272_i64),
-                (5189976364521848832_i64),
-                (1),
-                (1226245742482522112_i64),
+                ("4612671182993129469"),
+                ("5198983563776393216"),
+                ("1"),
+                ("2345108766317314046"),
+                ("5191102247248822272"),
+                ("5189976364521848832"),
+                ("1"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020474",
                     10
                 )),
-                (5189976364521848832_i64),
-                (17),
-                (1226245742482522112_i64),
+                ("5189976364521848832"),
+                ("17"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020470",
                     10
                 )),
-                (2345108766317314046_i64)
+                ("2345108766317314046")
             ),
             main = Some(4),
         );
@@ -3000,10 +3000,10 @@ mod tests {
         let program = program!(
             builtins = vec![BuiltinName::output],
             data = vec_data!(
-                (4612671187288162301),
-                (5198983563776458752),
-                (2),
-                (2345108766317314046)
+                ("4612671187288162301"),
+                ("5198983563776458752"),
+                ("2"),
+                ("2345108766317314046")
             ),
             main = Some(0),
         );
@@ -3057,26 +3057,26 @@ mod tests {
         let program = program!(
             builtins = vec![BuiltinName::output, BuiltinName::bitwise],
             data = vec_data!(
-                (4612671182993129469_i64),
-                (5198983563776393216_i64),
-                (1),
-                (2345108766317314046_i64),
-                (5191102247248822272_i64),
-                (5189976364521848832_i64),
-                (1),
-                (1226245742482522112_i64),
+                ("4612671182993129469"),
+                ("5198983563776393216"),
+                ("1"),
+                ("2345108766317314046"),
+                ("5191102247248822272"),
+                ("5189976364521848832"),
+                ("1"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020474",
                     10
                 )),
-                (5189976364521848832_i64),
-                (17),
-                (1226245742482522112_i64),
+                ("5189976364521848832"),
+                ("17"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020470",
                     10
                 )),
-                (2345108766317314046_i64)
+                ("2345108766317314046")
             ),
             main = Some(4),
         );
@@ -3156,23 +3156,26 @@ mod tests {
         let program = program!(
             builtins = vec![BuiltinName::range_check],
             data = vec_data!(
-                (4612671182993129469_i64),
-                (5189976364521848832_i64),
-                (18446744073709551615_i128),
-                (5199546496550207487_i64),
-                (4612389712311386111_i64),
-                (5198983563776393216_i64),
-                (2),
-                (2345108766317314046_i64),
-                (5191102247248822272_i64),
-                (5189976364521848832_i64),
-                (7),
-                (1226245742482522112_i64),
+                ("4612671182993129469"),
+                ("5198983563776393216"),
+                ("1"),
+                ("2345108766317314046"),
+                ("5191102247248822272"),
+                ("5189976364521848832"),
+                ("1"),
+                ("1226245742482522112"),
+                ((
+                    "3618502788666131213697322783095070105623107215331596699973092056135872020474",
+                    10
+                )),
+                ("5189976364521848832"),
+                ("17"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020470",
                     10
                 )),
-                (2345108766317314046_i64)
+                ("2345108766317314046")
             ),
             main = Some(8),
         );
@@ -3235,23 +3238,26 @@ mod tests {
         let program = program!(
             builtins = vec![BuiltinName::range_check],
             data = vec_data!(
-                (4612671182993129469_i64),
-                (5189976364521848832_i64),
-                (18446744073709551615_i128),
-                (5199546496550207487_i64),
-                (4612389712311386111_i64),
-                (5198983563776393216_i64),
-                (2),
-                (2345108766317314046_i64),
-                (5191102247248822272_i64),
-                (5189976364521848832_i64),
-                (7),
-                (1226245742482522112_i64),
+                ("4612671182993129469"),
+                ("5198983563776393216"),
+                ("1"),
+                ("2345108766317314046"),
+                ("5191102247248822272"),
+                ("5189976364521848832"),
+                ("1"),
+                ("1226245742482522112"),
+                ((
+                    "3618502788666131213697322783095070105623107215331596699973092056135872020474",
+                    10
+                )),
+                ("5189976364521848832"),
+                ("17"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020470",
                     10
                 )),
-                (2345108766317314046_i64)
+                ("2345108766317314046")
             ),
             main = Some(8),
         );
@@ -3308,23 +3314,23 @@ mod tests {
         let program = program!(
             builtins = vec![BuiltinName::range_check],
             data = vec_data!(
-                (4612671182993129469_i64),
-                (5189976364521848832_i64),
-                (18446744073709551615_i128),
-                (5199546496550207487_i64),
-                (4612389712311386111_i64),
-                (5198983563776393216_i64),
-                (2),
-                (2345108766317314046_i64),
-                (5191102247248822272_i64),
-                (5189976364521848832_i64),
-                (7),
-                (1226245742482522112_i64),
+                ("4612671182993129469"),
+                ("5189976364521848832"),
+                ("18446744073709551615"),
+                ("5199546496550207487"),
+                ("4612389712311386111"),
+                ("5198983563776393216"),
+                ("2"),
+                ("2345108766317314046"),
+                ("5191102247248822272"),
+                ("5189976364521848832"),
+                ("7"),
+                ("1226245742482522112"),
                 ((
                     "3618502788666131213697322783095070105623107215331596699973092056135872020470",
                     10
                 )),
-                (2345108766317314046_i64)
+                ("2345108766317314046")
             ),
             main = Some(8),
         );
@@ -3822,8 +3828,16 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn finalize_segments_run_ended_not_emptyproof_mode_empty_execution_public_memory() {
         let mut program = program!();
-        Arc::get_mut(&mut program.shared_program_data).unwrap().data =
-            vec_data![(1), (2), (3), (4), (5), (6), (7), (8)];
+        Arc::get_mut(&mut program.shared_program_data).unwrap().data = vec![
+            felt_str!("1"),
+            felt_str!("2"),
+            felt_str!("3"),
+            felt_str!("4"),
+            felt_str!("5"),
+            felt_str!("6"),
+            felt_str!("7"),
+            felt_str!("8"),
+        ];
         //Program data len = 8
         let mut cairo_runner = cairo_runner!(program, "plain", true);
         cairo_runner.program_base = Some(Relocatable::from((0, 0)));
@@ -3856,8 +3870,12 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn finalize_segments_run_ended_not_emptyproof_mode_with_execution_public_memory() {
         let mut program = program!();
-        Arc::get_mut(&mut program.shared_program_data).unwrap().data =
-            vec_data![(1), (2), (3), (4)];
+        Arc::get_mut(&mut program.shared_program_data).unwrap().data = vec![
+            felt_str!("1"),
+            felt_str!("2"),
+            felt_str!("3"),
+            felt_str!("4"),
+        ];
         //Program data len = 4
         let mut cairo_runner = cairo_runner!(program, "plain", true);
         cairo_runner.program_base = Some(Relocatable::from((0, 0)));
@@ -4480,8 +4498,16 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn read_return_values_test() {
         let mut program = program!();
-        Arc::get_mut(&mut program.shared_program_data).unwrap().data =
-            vec_data![(1), (2), (3), (4), (5), (6), (7), (8)];
+        Arc::get_mut(&mut program.shared_program_data).unwrap().data = vec![
+            felt_str!("1"),
+            felt_str!("2"),
+            felt_str!("3"),
+            felt_str!("4"),
+            felt_str!("5"),
+            felt_str!("6"),
+            felt_str!("7"),
+            felt_str!("8"),
+        ];
         //Program data len = 8
         let mut cairo_runner = cairo_runner!(program, "plain", true);
         cairo_runner.program_base = Some(Relocatable::from((0, 0)));
@@ -4504,8 +4530,16 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn read_return_values_test_with_run_not_ended() {
         let mut program = program!();
-        Arc::get_mut(&mut program.shared_program_data).unwrap().data =
-            vec_data![(1), (2), (3), (4), (5), (6), (7), (8)];
+        Arc::get_mut(&mut program.shared_program_data).unwrap().data = vec![
+            felt_str!("1"),
+            felt_str!("2"),
+            felt_str!("3"),
+            felt_str!("4"),
+            felt_str!("5"),
+            felt_str!("6"),
+            felt_str!("7"),
+            felt_str!("8"),
+        ];
         //Program data len = 8
         let mut cairo_runner = cairo_runner!(program, "plain", true);
         cairo_runner.program_base = Some(Relocatable::from((0, 0)));
@@ -4522,8 +4556,16 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn read_return_values_test_with_segments_finalized() {
         let mut program = program!();
-        Arc::get_mut(&mut program.shared_program_data).unwrap().data =
-            vec_data![(1), (2), (3), (4), (5), (6), (7), (8)];
+        Arc::get_mut(&mut program.shared_program_data).unwrap().data = vec![
+            felt_str!("1"),
+            felt_str!("2"),
+            felt_str!("3"),
+            felt_str!("4"),
+            felt_str!("5"),
+            felt_str!("6"),
+            felt_str!("7"),
+            felt_str!("8"),
+        ];
         //Program data len = 8
         let mut cairo_runner = cairo_runner!(program, "plain", true);
         cairo_runner.program_base = Some(Relocatable::from((0, 0)));
@@ -4541,8 +4583,16 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn read_return_values_updates_builtin_stop_ptr_one_builtin_empty() {
         let mut program = program![BuiltinName::output];
-        Arc::get_mut(&mut program.shared_program_data).unwrap().data =
-            vec_data![(1), (2), (3), (4), (5), (6), (7), (8)];
+        Arc::get_mut(&mut program.shared_program_data).unwrap().data = vec![
+            felt_str!("1"),
+            felt_str!("2"),
+            felt_str!("3"),
+            felt_str!("4"),
+            felt_str!("5"),
+            felt_str!("6"),
+            felt_str!("7"),
+            felt_str!("8"),
+        ];
         //Program data len = 8
         let mut cairo_runner = cairo_runner!(program, "all_cairo", true);
         cairo_runner.program_base = Some(Relocatable::from((0, 0)));
@@ -4572,8 +4622,16 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn read_return_values_updates_builtin_stop_ptr_one_builtin_one_element() {
         let mut program = program![BuiltinName::output];
-        Arc::get_mut(&mut program.shared_program_data).unwrap().data =
-            vec_data![(1), (2), (3), (4), (5), (6), (7), (8)];
+        Arc::get_mut(&mut program.shared_program_data).unwrap().data = vec![
+            felt_str!("1"),
+            felt_str!("2"),
+            felt_str!("3"),
+            felt_str!("4"),
+            felt_str!("5"),
+            felt_str!("6"),
+            felt_str!("7"),
+            felt_str!("8"),
+        ];
         //Program data len = 8
         let mut cairo_runner = cairo_runner!(program, "all_cairo", true);
         cairo_runner.program_base = Some(Relocatable::from((0, 0)));
@@ -4603,8 +4661,16 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn read_return_values_updates_builtin_stop_ptr_two_builtins() {
         let mut program = program![BuiltinName::output, BuiltinName::bitwise];
-        Arc::get_mut(&mut program.shared_program_data).unwrap().data =
-            vec_data![(1), (2), (3), (4), (5), (6), (7), (8)];
+        Arc::get_mut(&mut program.shared_program_data).unwrap().data = vec![
+            felt_str!("1"),
+            felt_str!("2"),
+            felt_str!("3"),
+            felt_str!("4"),
+            felt_str!("5"),
+            felt_str!("6"),
+            felt_str!("7"),
+            felt_str!("8"),
+        ];
         //Program data len = 8
         let mut cairo_runner = cairo_runner!(program, "all_cairo", true);
         cairo_runner.program_base = Some(Relocatable::from((0, 0)));
@@ -5052,7 +5118,7 @@ mod tests {
     fn test_get_program() {
         let program = program!(
             builtins = vec![BuiltinName::output],
-            data = vec_data!((4), (6)),
+            data = vec_data!(("4"), ("6")),
         );
         let runner = cairo_runner!(program);
 
