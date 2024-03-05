@@ -1,4 +1,4 @@
-use crate::stdlib::{borrow::Cow, prelude::*};
+use crate::stdlib::prelude::*;
 use crate::stdlib::{cell::RefCell, collections::HashMap};
 use crate::types::instance_definitions::ec_op_instance_def::{
     EcOpInstanceDef, CELLS_PER_EC_OP, INPUT_CELLS_PER_EC_OP,
@@ -6,7 +6,7 @@ use crate::types::instance_definitions::ec_op_instance_def::{
 use crate::types::relocatable::{MaybeRelocatable, Relocatable};
 use crate::vm::errors::memory_errors::MemoryError;
 use crate::vm::errors::runner_errors::RunnerError;
-use crate::vm::vm_memory::memory::Memory;
+use crate::vm::vm_memory::memory::{MaybeRelocatableRef, Memory};
 use crate::vm::vm_memory::memory_segments::MemorySegmentManager;
 use felt::Felt252;
 use num_bigint::{BigInt, Sign};
@@ -189,9 +189,7 @@ impl EcOpBuiltinRunner {
                 None => return Ok(None),
                 Some(addr) => {
                     input_cells.push(match addr {
-                        // Only relocatable values can be owned
-                        Cow::Borrowed(MaybeRelocatable::Int(ref num)) => num.clone(),
-                        Cow::Owned(MaybeRelocatable::Int(num)) => num,
+                        MaybeRelocatableRef::IntRef(num) => num.clone(),
                         _ => {
                             return Err(RunnerError::Memory(MemoryError::ExpectedInteger(
                                 Box::new((instance + i)?),

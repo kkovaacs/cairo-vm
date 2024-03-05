@@ -126,8 +126,8 @@ mod tests {
                 .memory
                 .get(&MaybeRelocatable::from((1, 0)))
                 .unwrap()
-                .as_ref(),
-            &MaybeRelocatable::Int(Felt252::zero())
+                .get_int_ref(),
+            MaybeRelocatable::Int(Felt252::zero()).get_int_ref()
         )
     }
 

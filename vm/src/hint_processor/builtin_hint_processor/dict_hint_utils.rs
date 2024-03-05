@@ -361,8 +361,8 @@ mod tests {
                 .memory
                 .get(&MaybeRelocatable::from((1, 1)))
                 .unwrap()
-                .as_ref(),
-            &MaybeRelocatable::from(12)
+                .get_relocatable(),
+            MaybeRelocatable::from(12).get_relocatable()
         );
         //Check that the tracker's current_ptr has moved accordingly
         check_dict_ptr!(&exec_scopes, 2, (2, 3));

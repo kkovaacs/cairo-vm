@@ -1,9 +1,4 @@
-use crate::stdlib::{
-    borrow::{Cow, ToOwned},
-    boxed::Box,
-    collections::HashMap,
-    prelude::*,
-};
+use crate::stdlib::{borrow::ToOwned, boxed::Box, collections::HashMap, prelude::*};
 use crate::{
     felt::Felt252,
     hint_processor::{
@@ -342,17 +337,16 @@ pub(crate) fn cairo_keccak_finalize_v2(
 // Helper function to transform a vector of MaybeRelocatables into a vector
 // of u64. Raises error if there are None's or if MaybeRelocatables are not Bigints.
 pub(crate) fn maybe_reloc_vec_to_u64_array(
-    vec: &[Option<Cow<MaybeRelocatable>>],
+    vec: &[Option<MaybeRelocatable>],
 ) -> Result<Vec<u64>, HintError> {
     let array = vec
         .iter()
         .map(|n| match n {
-            Some(Cow::Owned(MaybeRelocatable::Int(ref num)))
-            | Some(Cow::Borrowed(MaybeRelocatable::Int(ref num))) => num
+            Some(MaybeRelocatable::Int(ref num)) => num
                 .to_u64()
                 .ok_or_else(|| MathError::Felt252ToU64Conversion(Box::new(num.clone())).into()),
             _ => Err(VirtualMachineError::ExpectedIntAtRange(Box::new(
-                n.as_ref().map(|x| x.as_ref().to_owned()),
+                n.as_ref().map(|x| x.to_owned()),
             ))),
         })
         .collect::<Result<Vec<u64>, VirtualMachineError>>()?;

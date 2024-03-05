@@ -30,6 +30,7 @@ use num_traits::{ToPrimitive, Zero};
 use super::errors::runner_errors::RunnerError;
 use super::errors::trace_errors::TraceError;
 use super::runners::builtin_runner::OUTPUT_BUILTIN_NAME;
+use super::vm_memory::memory::MaybeRelocatableRef;
 
 const MAX_TRACEBACK_ENTRIES: u32 = 20;
 
@@ -554,15 +555,15 @@ impl VirtualMachine {
     ) -> Result<(Operands, OperandsAddresses, DeducedOperands), VirtualMachineError> {
         //Get operands from memory
         let dst_addr = self.run_context.compute_dst_addr(instruction)?;
-        let dst_op = self.segments.memory.get(&dst_addr).map(Cow::into_owned);
+        let dst_op = self.segments.memory.get(&dst_addr).map(Into::into);
 
         let op0_addr = self.run_context.compute_op0_addr(instruction)?;
-        let op0_op = self.segments.memory.get(&op0_addr).map(Cow::into_owned);
+        let op0_op = self.segments.memory.get(&op0_addr).map(Into::into);
 
         let op1_addr = self
             .run_context
             .compute_op1_addr(instruction, op0_op.as_ref())?;
-        let op1_op = self.segments.memory.get(&op1_addr).map(Cow::into_owned);
+        let op1_op = self.segments.memory.get(&op1_addr).map(Into::into);
 
         let mut res: Option<MaybeRelocatable> = None;
 
@@ -648,7 +649,7 @@ impl VirtualMachine {
             None => return Ok(()),
         };
         let current_value = match self.segments.memory.get(&addr) {
-            Some(value) => value.into_owned(),
+            Some(value) => value.into(),
             None => return Ok(()),
         };
         if value != current_value {
@@ -773,7 +774,7 @@ impl VirtualMachine {
     where
         Relocatable: TryFrom<&'a K>,
     {
-        self.segments.memory.get(key).map(|x| x.into_owned())
+        self.segments.memory.get(key).map(Into::into)
     }
 
     /// Returns a reference to the vector with all builtins present in the virtual machine
@@ -843,7 +844,7 @@ impl VirtualMachine {
     }
 
     ///Gets n elements from memory starting from addr (n being size)
-    pub fn get_range(&self, addr: Relocatable, size: usize) -> Vec<Option<Cow<MaybeRelocatable>>> {
+    pub fn get_range(&self, addr: Relocatable, size: usize) -> Vec<Option<MaybeRelocatable>> {
         self.segments.memory.get_range(addr, size)
     }
 
@@ -963,9 +964,9 @@ impl VirtualMachine {
                 .memory
                 .get(&Relocatable::from((segment_index as isize, i)))
             {
-                Some(val) => match val.as_ref() {
-                    MaybeRelocatable::Int(num) => format!("{}", num.to_signed_felt()),
-                    MaybeRelocatable::RelocatableValue(rel) => format!("{}", rel),
+                Some(val) => match val {
+                    MaybeRelocatableRef::IntRef(num) => format!("{}", num.to_signed_felt()),
+                    MaybeRelocatableRef::RelocatableValue(rel) => format!("{}", rel),
                 },
                 _ => "<missing>".to_string(),
             };
@@ -3112,8 +3113,8 @@ mod tests {
                 .memory
                 .get(&vm.run_context.get_ap())
                 .unwrap()
-                .as_ref(),
-            &MaybeRelocatable::Int(Felt252::new(0x4)),
+                .get_int_ref(),
+            MaybeRelocatable::Int(Felt252::new(0x4)).get_int_ref(),
         );
         let mut hint_processor = BuiltinHintProcessor::new_empty();
         assert_matches!(
@@ -3133,8 +3134,8 @@ mod tests {
                 .memory
                 .get(&vm.run_context.get_ap())
                 .unwrap()
-                .as_ref(),
-            &MaybeRelocatable::Int(Felt252::new(0x5))
+                .get_int_ref(),
+            MaybeRelocatable::Int(Felt252::new(0x5)).get_int_ref()
         );
 
         let mut hint_processor = BuiltinHintProcessor::new_empty();
@@ -3155,8 +3156,8 @@ mod tests {
                 .memory
                 .get(&vm.run_context.get_ap())
                 .unwrap()
-                .as_ref(),
-            &MaybeRelocatable::Int(Felt252::new(0x14)),
+                .get_int_ref(),
+            MaybeRelocatable::Int(Felt252::new(0x14)).get_int_ref(),
         );
     }
 
@@ -3773,11 +3774,7 @@ mod tests {
         let value2 = MaybeRelocatable::from(Felt252::new(3_i32));
         let value3 = MaybeRelocatable::from(Felt252::new(4_i32));
 
-        let expected_vec = vec![
-            Some(Cow::Borrowed(&value1)),
-            Some(Cow::Borrowed(&value2)),
-            Some(Cow::Borrowed(&value3)),
-        ];
+        let expected_vec = vec![Some(value1), Some(value2), Some(value3)];
         assert_eq!(vm.get_range(Relocatable::from((1, 0)), 3), expected_vec);
     }
 
@@ -3791,12 +3788,7 @@ mod tests {
         let value2 = MaybeRelocatable::from(Felt252::new(3_i32));
         let value3 = MaybeRelocatable::from(Felt252::new(4_i32));
 
-        let expected_vec = vec![
-            Some(Cow::Borrowed(&value1)),
-            Some(Cow::Borrowed(&value2)),
-            None,
-            Some(Cow::Borrowed(&value3)),
-        ];
+        let expected_vec = vec![Some(value1), Some(value2), None, Some(value3)];
         assert_eq!(vm.get_range(Relocatable::from((1, 0)), 4), expected_vec);
     }
 

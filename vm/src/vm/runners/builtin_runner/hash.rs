@@ -6,7 +6,7 @@ use crate::types::relocatable::{MaybeRelocatable, Relocatable};
 use crate::vm::errors::memory_errors::MemoryError;
 use crate::vm::errors::runner_errors::RunnerError;
 use crate::vm::runners::cairo_pie::BuiltinAdditionalData;
-use crate::vm::vm_memory::memory::Memory;
+use crate::vm::vm_memory::memory::{MaybeRelocatableRef, Memory};
 use crate::vm::vm_memory::memory_segments::MemorySegmentManager;
 use felt::Felt252;
 use num_integer::{div_ceil, Integer};
@@ -92,10 +92,11 @@ impl HashBuiltinRunner {
             segment_index: address.segment_index,
             offset: address.offset - 2,
         }));
-        if let (Some(MaybeRelocatable::Int(num_a)), Some(MaybeRelocatable::Int(num_b))) = (
-            num_a.as_ref().map(|x| x.as_ref()),
-            num_b.as_ref().map(|x| x.as_ref()),
-        ) {
+        if let (
+            Some(MaybeRelocatableRef::IntRef(num_a)),
+            Some(MaybeRelocatableRef::IntRef(num_b)),
+        ) = (num_a, num_b)
+        {
             if self.verified_addresses.borrow().len() <= address.offset {
                 self.verified_addresses
                     .borrow_mut()
