@@ -160,19 +160,22 @@ pub(self) fn run_cairo_1_entrypoint(
     let builtin_costs: Vec<MaybeRelocatable> =
         vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
     let builtin_costs_ptr = vm.add_memory_segment();
-    vm.load_data(builtin_costs_ptr, &builtin_costs).unwrap();
+    vm.load_mayberelocatable(builtin_costs_ptr, &builtin_costs)
+        .unwrap();
 
     // Load extra data
     let core_program_end_ptr =
         (runner.program_base.unwrap() + runner.program.shared_program_data.data.len()).unwrap();
     let program_extra_data: Vec<MaybeRelocatable> =
         vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
-    vm.load_data(core_program_end_ptr, &program_extra_data)
+    vm.load_mayberelocatable(core_program_end_ptr, &program_extra_data)
         .unwrap();
 
     // Load calldata
     let calldata_start = vm.add_memory_segment();
-    let calldata_end = vm.load_data(calldata_start, &args.to_vec()).unwrap();
+    let calldata_end = vm
+        .load_mayberelocatable(calldata_start, &args.to_vec())
+        .unwrap();
 
     // Create entrypoint_args
 
@@ -262,19 +265,22 @@ pub(self) fn run_cairo_1_entrypoint_with_run_resources(
     let builtin_costs: Vec<MaybeRelocatable> =
         vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
     let builtin_costs_ptr = vm.add_memory_segment();
-    vm.load_data(builtin_costs_ptr, &builtin_costs).unwrap();
+    vm.load_mayberelocatable(builtin_costs_ptr, &builtin_costs)
+        .unwrap();
 
     // Load extra data
     let core_program_end_ptr =
         (runner.program_base.unwrap() + runner.program.shared_program_data.data.len()).unwrap();
     let program_extra_data: Vec<MaybeRelocatable> =
         vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
-    vm.load_data(core_program_end_ptr, &program_extra_data)
+    vm.load_mayberelocatable(core_program_end_ptr, &program_extra_data)
         .unwrap();
 
     // Load calldata
     let calldata_start = vm.add_memory_segment();
-    let calldata_end = vm.load_data(calldata_start, &args.to_vec()).unwrap();
+    let calldata_end = vm
+        .load_mayberelocatable(calldata_start, &args.to_vec())
+        .unwrap();
 
     // Create entrypoint_args
 

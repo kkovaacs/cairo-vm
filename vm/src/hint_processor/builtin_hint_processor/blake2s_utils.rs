@@ -31,17 +31,14 @@ fn get_fixed_size_u32_array<const T: usize>(
         .map_err(|_| HintError::FixedSizeArrayFail(T))
 }
 
-fn get_maybe_relocatable_array_from_u32(array: &Vec<u32>) -> Vec<MaybeRelocatable> {
-    let mut new_array = Vec::<MaybeRelocatable>::with_capacity(array.len());
+fn get_felt_array_from_u32(array: &Vec<u32>) -> Vec<Felt252> {
+    let mut new_array = Vec::<Felt252>::with_capacity(array.len());
     for element in array {
-        new_array.push(MaybeRelocatable::from(Felt252::new(*element)));
+        new_array.push(Felt252::new(*element));
     }
     new_array
 }
 
-fn get_maybe_relocatable_array_from_felt(array: &[Felt252]) -> Vec<MaybeRelocatable> {
-    array.iter().map(MaybeRelocatable::from).collect()
-}
 /*Helper function for the Cairo blake2s() implementation.
 Computes the blake2s compress function and fills the value in the right position.
 output_ptr should point to the middle of an instance, right after initial_state, message, t, f,
@@ -52,8 +49,7 @@ fn compute_blake2s_func(vm: &mut VirtualMachine, output_ptr: Relocatable) -> Res
     let message = get_fixed_size_u32_array::<16>(&vm.get_integer_range((output_ptr - 18)?, 16)?)?;
     let t = felt_to_u32(vm.get_integer((output_ptr - 2)?)?.as_ref())?;
     let f = felt_to_u32(vm.get_integer((output_ptr - 1)?)?.as_ref())?;
-    let new_state =
-        get_maybe_relocatable_array_from_u32(&blake2s_compress(&h, &message, t, 0, f, 0));
+    let new_state = get_felt_array_from_u32(&blake2s_compress(&h, &message, t, 0, f, 0));
     vm.load_data(output_ptr, &new_state)
         .map_err(HintError::Memory)?;
     Ok(())
@@ -114,7 +110,7 @@ pub fn finalize_blake2s(
     for _ in 0..N_PACKED_INSTANCES - 1 {
         full_padding.extend_from_slice(padding);
     }
-    let data = get_maybe_relocatable_array_from_u32(&full_padding);
+    let data = get_felt_array_from_u32(&full_padding);
     vm.load_data(blake2s_ptr_end, &data)
         .map_err(HintError::Memory)?;
     Ok(())
@@ -162,7 +158,7 @@ pub fn finalize_blake2s_v3(
     for _ in 0..N_PACKED_INSTANCES - 1 {
         full_padding.extend_from_slice(padding);
     }
-    let data = get_maybe_relocatable_array_from_u32(&full_padding);
+    let data = get_felt_array_from_u32(&full_padding);
     vm.load_data(blake2s_ptr_end, &data)
         .map_err(HintError::Memory)?;
     Ok(())
@@ -197,16 +193,15 @@ pub fn blake2s_add_uint256(
         inner_data.push((&low >> (B * i)) & &mask);
     }
     //Insert first batch of data
-    let data = get_maybe_relocatable_array_from_felt(&inner_data);
-    vm.load_data(data_ptr, &data).map_err(HintError::Memory)?;
+    vm.load_data(data_ptr, &inner_data)
+        .map_err(HintError::Memory)?;
     //Build second batch of data
     let mut inner_data = Vec::<Felt252>::new();
     for i in 0..4 {
         inner_data.push((&high >> (B * i)) & &mask);
     }
     //Insert second batch of data
-    let data = get_maybe_relocatable_array_from_felt(&inner_data);
-    vm.load_data((data_ptr + 4)?, &data)
+    vm.load_data((data_ptr + 4)?, &inner_data)
         .map_err(HintError::Memory)?;
     Ok(())
 }
@@ -240,16 +235,15 @@ pub fn blake2s_add_uint256_bigend(
         inner_data.push((&high >> (B * (3 - i))) & &mask);
     }
     //Insert first batch of data
-    let data = get_maybe_relocatable_array_from_felt(&inner_data);
-    vm.load_data(data_ptr, &data).map_err(HintError::Memory)?;
+    vm.load_data(data_ptr, &inner_data)
+        .map_err(HintError::Memory)?;
     //Build second batch of data
     let mut inner_data = Vec::<Felt252>::new();
     for i in 0..4 {
         inner_data.push((&low >> (B * (3 - i))) & &mask);
     }
     //Insert second batch of data
-    let data = get_maybe_relocatable_array_from_felt(&inner_data);
-    vm.load_data((data_ptr + 4)?, &data)
+    vm.load_data((data_ptr + 4)?, &inner_data)
         .map_err(HintError::Memory)?;
     Ok(())
 }

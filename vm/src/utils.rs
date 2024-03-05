@@ -114,6 +114,7 @@ pub mod test_utils {
 
         };
     }
+    use felt::Felt252;
     pub(crate) use segments;
 
     macro_rules! memory {
@@ -296,7 +297,7 @@ pub mod test_utils {
     pub(crate) use program;
 
     pub(crate) struct ProgramFlat {
-        pub(crate) data: crate::utils::Vec<MaybeRelocatable>,
+        pub(crate) data: crate::utils::Vec<Felt252>,
         pub(crate) hints: crate::stdlib::collections::BTreeMap<
             usize,
             crate::utils::Vec<crate::serde::deserialize_program::HintParams>,
@@ -585,10 +586,10 @@ pub mod test_utils {
 
     macro_rules! vec_data_inner {
         (( $val1:expr, $val2:expr )) => {
-            mayberelocatable!($val1, $val2)
+            $crate::felt::felt_str!($val1, $val2)
         };
         ( $val:expr ) => {
-            mayberelocatable!($val)
+            $crate::felt::felt_str!($val)
         };
     }
     pub(crate) use vec_data_inner;
@@ -908,12 +909,12 @@ mod test {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn data_vec_test() {
-        let data = vec_data!((1), ((2, 2)), (("49128305", 10)), (("3b6f00a9", 16)));
-        assert_eq!(data[0], mayberelocatable!(1));
-        assert_eq!(data[1], mayberelocatable!(2, 2));
-        assert_eq!(data[2], mayberelocatable!(49128305));
-        assert_eq!(data[3], mayberelocatable!(997130409));
+        let data = vec_data!(("1"), (("49128305", 10)), (("3b6f00a9", 16)));
+        assert_eq!(data[0], 1.into());
+        assert_eq!(data[1], 49128305.into());
+        assert_eq!(data[2], 997130409.into());
     }
+
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn from_relocatable_to_indexes_test() {

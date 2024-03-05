@@ -214,10 +214,9 @@ fn run(args: impl Iterator<Item = String>) -> Result<Vec<MaybeRelocatable>, Erro
     let (processor_hints, program_hints) = build_hints_vec(instructions.clone());
     let mut hint_processor = Cairo1HintProcessor::new(&processor_hints, RunResources::default());
 
-    let data: Vec<MaybeRelocatable> = instructions
+    let data: Vec<Felt252> = instructions
         .flat_map(|inst| inst.assemble().encode())
         .map(Felt252::from)
-        .map(MaybeRelocatable::from)
         .collect();
 
     let data_len = data.len();

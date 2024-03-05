@@ -11,7 +11,6 @@ use super::deserialize_program::{
     Member, ProgramJson, Reference, ReferenceManager, ValueAddress,
 };
 use crate::types::program::Program;
-use crate::types::relocatable::MaybeRelocatable;
 
 // This struct is used to Serialize and Deserialize a Program struct
 // Their fields are equal to the ProgramJson
@@ -20,7 +19,7 @@ use crate::types::relocatable::MaybeRelocatable;
 pub(crate) struct ProgramSerializer {
     pub prime: String,
     pub builtins: Vec<BuiltinName>,
-    pub data: Vec<MaybeRelocatable>,
+    pub data: Vec<Felt252>,
     pub identifiers: HashMap<String, IdentifierSerializer>,
     pub hints: BTreeMap<usize, Vec<HintParamsSerializer>>,
     pub reference_manager: ReferenceManagerSerializer,

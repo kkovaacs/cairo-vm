@@ -80,7 +80,7 @@ pub struct CairoPieMetadata {
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct StrippedProgram {
     #[serde(serialize_with = "serde_impl::serialize_program_data")]
-    pub data: Vec<MaybeRelocatable>,
+    pub data: Vec<Felt252>,
     pub builtins: Vec<BuiltinName>,
     pub main: usize,
 
@@ -126,22 +126,14 @@ mod serde_impl {
         }
     }
 
-    pub fn serialize_program_data<S>(
-        values: &[MaybeRelocatable],
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    pub fn serialize_program_data<S>(values: &[Felt252], serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         let mut seq_serializer = serializer.serialize_seq(Some(values.len()))?;
 
         for value in values {
-            match value {
-                MaybeRelocatable::RelocatableValue(_) => todo!(),
-                MaybeRelocatable::Int(x) => {
-                    seq_serializer.serialize_element(&Felt252Wrapper(x))?;
-                }
-            };
+            seq_serializer.serialize_element(&Felt252Wrapper(value))?;
         }
 
         seq_serializer.end()

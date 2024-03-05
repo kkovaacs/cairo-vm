@@ -20,7 +20,6 @@ use crate::{
         errors::program_errors::ProgramError,
         instruction::Register,
         program::{HintsCollection, Program, SharedProgramData},
-        relocatable::MaybeRelocatable,
     },
     vm::runners::builtin_runner::{
         BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
@@ -75,7 +74,7 @@ pub struct ProgramJson {
     pub prime: String,
     pub builtins: Vec<BuiltinName>,
     #[serde(deserialize_with = "deserialize_array_of_bigint_hex")]
-    pub data: Vec<MaybeRelocatable>,
+    pub data: Vec<Felt252>,
     pub identifiers: HashMap<String, Identifier>,
     pub hints: BTreeMap<usize, Vec<HintParams>>,
     pub reference_manager: ReferenceManager,
@@ -335,7 +334,7 @@ impl<'de> de::Visitor<'de> for Felt252Visitor {
 struct MaybeRelocatableVisitor;
 
 impl<'de> de::Visitor<'de> for MaybeRelocatableVisitor {
-    type Value = Vec<MaybeRelocatable>;
+    type Value = Vec<Felt252>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("Could not deserialize array of hexadecimal")
@@ -345,15 +344,13 @@ impl<'de> de::Visitor<'de> for MaybeRelocatableVisitor {
     where
         A: SeqAccess<'de>,
     {
-        let mut data: Vec<MaybeRelocatable> = vec![];
+        let mut data: Vec<Felt252> = vec![];
 
         while let Some(value) = seq.next_element::<String>()? {
             if let Some(no_prefix_hex) = value.strip_prefix("0x") {
                 // Add padding if necessary
                 let no_prefix_hex = deserialize_utils::maybe_add_padding(no_prefix_hex.to_string());
-                data.push(MaybeRelocatable::Int(
-                    Felt252::from_str_radix(&no_prefix_hex, 16).map_err(de::Error::custom)?,
-                ));
+                data.push(Felt252::from_str_radix(&no_prefix_hex, 16).map_err(de::Error::custom)?);
             } else {
                 return Err(String::from("hex prefix error")).map_err(de::Error::custom);
             };
@@ -414,7 +411,7 @@ pub fn deserialize_felt_hex<'de, D: Deserializer<'de>>(d: D) -> Result<Felt252, 
 
 pub fn deserialize_array_of_bigint_hex<'de, D: Deserializer<'de>>(
     d: D,
-) -> Result<Vec<MaybeRelocatable>, D::Error> {
+) -> Result<Vec<Felt252>, D::Error> {
     d.deserialize_seq(MaybeRelocatableVisitor)
 }
 
@@ -673,13 +670,13 @@ mod tests {
         // ProgramJson instance for the json with an even length encoded hex.
         let program_json: ProgramJson = serde_json::from_str(valid_json).unwrap();
 
-        let data: Vec<MaybeRelocatable> = vec![
-            MaybeRelocatable::Int(Felt252::new(5189976364521848832_i64)),
-            MaybeRelocatable::Int(Felt252::new(1000_i64)),
-            MaybeRelocatable::Int(Felt252::new(5189976364521848832_i64)),
-            MaybeRelocatable::Int(Felt252::new(2000_i64)),
-            MaybeRelocatable::Int(Felt252::new(5201798304953696256_i64)),
-            MaybeRelocatable::Int(Felt252::new(2345108766317314046_i64)),
+        let data: Vec<Felt252> = vec![
+            Felt252::new(5189976364521848832_i64),
+            Felt252::new(1000_i64),
+            Felt252::new(5189976364521848832_i64),
+            Felt252::new(2000_i64),
+            Felt252::new(5201798304953696256_i64),
+            Felt252::new(2345108766317314046_i64),
         ];
 
         let mut hints = BTreeMap::new();
@@ -879,13 +876,13 @@ mod tests {
             .expect("Failed to deserialize program");
 
         let builtins: Vec<BuiltinName> = Vec::new();
-        let data: Vec<MaybeRelocatable> = vec![
-            MaybeRelocatable::Int(Felt252::new(5189976364521848832_i64)),
-            MaybeRelocatable::Int(Felt252::new(1000)),
-            MaybeRelocatable::Int(Felt252::new(5189976364521848832_i64)),
-            MaybeRelocatable::Int(Felt252::new(2000)),
-            MaybeRelocatable::Int(Felt252::new(5201798304953696256_i64)),
-            MaybeRelocatable::Int(Felt252::new(2345108766317314046_i64)),
+        let data: Vec<Felt252> = vec![
+            Felt252::new(5189976364521848832_i64),
+            Felt252::new(1000),
+            Felt252::new(5189976364521848832_i64),
+            Felt252::new(2000),
+            Felt252::new(5201798304953696256_i64),
+            Felt252::new(2345108766317314046_i64),
         ];
 
         let hints: HashMap<_, _> = [
@@ -948,13 +945,13 @@ mod tests {
             deserialize_and_parse_program(reader, None).expect("Failed to deserialize program");
 
         let builtins: Vec<BuiltinName> = Vec::new();
-        let data: Vec<MaybeRelocatable> = vec![
-            MaybeRelocatable::Int(Felt252::new(5189976364521848832_i64)),
-            MaybeRelocatable::Int(Felt252::new(1000)),
-            MaybeRelocatable::Int(Felt252::new(5189976364521848832_i64)),
-            MaybeRelocatable::Int(Felt252::new(2000)),
-            MaybeRelocatable::Int(Felt252::new(5201798304953696256_i64)),
-            MaybeRelocatable::Int(Felt252::new(2345108766317314046_i64)),
+        let data: Vec<Felt252> = vec![
+            Felt252::new(5189976364521848832_i64),
+            Felt252::new(1000),
+            Felt252::new(5189976364521848832_i64),
+            Felt252::new(2000),
+            Felt252::new(5201798304953696256_i64),
+            Felt252::new(2345108766317314046_i64),
         ];
 
         let hints: HashMap<_, _> = [

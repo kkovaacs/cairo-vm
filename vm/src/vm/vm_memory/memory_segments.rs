@@ -1,3 +1,5 @@
+use felt::Felt252;
+
 use crate::stdlib::prelude::*;
 use crate::stdlib::{any::Any, collections::HashMap};
 use crate::vm::runners::cairo_runner::CairoArg;
@@ -54,10 +56,24 @@ impl MemorySegmentManager {
     }
 
     ///Writes data into the memory from address ptr and returns the first address after the data.
+    pub fn load_felts(
+        &mut self,
+        ptr: Relocatable,
+        data: &[Felt252],
+    ) -> Result<Relocatable, MemoryError> {
+        // Starting from the end ensures any necessary resize
+        // is performed once with enough room for everything
+        for (num, value) in data.iter().enumerate().rev() {
+            self.memory.insert((ptr + num)?, value)?;
+        }
+        (ptr + data.len()).map_err(MemoryError::Math)
+    }
+
+    ///Writes data into the memory from address ptr and returns the first address after the data.
     pub fn load_data(
         &mut self,
         ptr: Relocatable,
-        data: &Vec<MaybeRelocatable>,
+        data: &[MaybeRelocatable],
     ) -> Result<Relocatable, MemoryError> {
         // Starting from the end ensures any necessary resize
         // is performed once with enough room for everything
@@ -163,8 +179,8 @@ impl MemorySegmentManager {
         if let Some(vector) = arg.downcast_ref::<Vec<MaybeRelocatable>>() {
             self.load_data(ptr, vector).map(Into::into)
         } else if let Some(vector) = arg.downcast_ref::<Vec<Relocatable>>() {
-            let data = &vector.iter().map(|value| value.into()).collect();
-            self.load_data(ptr, data).map(Into::into)
+            let data: Vec<_> = vector.iter().map(|value| value.into()).collect();
+            self.load_data(ptr, &data).map(Into::into)
         } else {
             Err(MemoryError::WriteArg)
         }
@@ -331,7 +347,7 @@ mod tests {
         let data = Vec::new();
         let ptr = Relocatable::from((0, 3));
         let mut segments = MemorySegmentManager::new();
-        let current_ptr = segments.load_data(ptr, &data).unwrap();
+        let current_ptr = segments.load_felts(ptr, &data).unwrap();
         assert_eq!(current_ptr, Relocatable::from((0, 3)));
     }
 

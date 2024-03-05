@@ -384,7 +384,7 @@ impl CairoRunner {
             };
             self.initial_pc = Some(initial_pc);
             vm.segments
-                .load_data(prog_base, &self.program.shared_program_data.data)
+                .load_felts(prog_base, &self.program.shared_program_data.data)
                 .map_err(RunnerError::MemoryInitializationError)?;
 
             // Mark all addresses from the program segment as accessed

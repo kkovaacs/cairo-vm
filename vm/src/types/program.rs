@@ -19,9 +19,7 @@ use crate::{
         deserialize_and_parse_program, Attribute, BuiltinName, HintParams, Identifier,
         InstructionLocation, OffsetValue, ReferenceManager,
     },
-    types::{
-        errors::program_errors::ProgramError, instruction::Register, relocatable::MaybeRelocatable,
-    },
+    types::{errors::program_errors::ProgramError, instruction::Register},
 };
 #[cfg(feature = "cairo-1-hints")]
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -57,7 +55,7 @@ use arbitrary::{Arbitrary, Unstructured};
 // Fields in `Program` (other than `SharedProgramData` itself) are used by the main logic.
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub(crate) struct SharedProgramData {
-    pub(crate) data: Vec<MaybeRelocatable>,
+    pub(crate) data: Vec<Felt252>,
     pub(crate) hints_collection: HintsCollection,
     pub(crate) main: Option<usize>,
     //start and end labels will only be used in proof-mode
@@ -187,7 +185,7 @@ impl Program {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         builtins: Vec<BuiltinName>,
-        data: Vec<MaybeRelocatable>,
+        data: Vec<Felt252>,
         main: Option<usize>,
         hints: HashMap<usize, Vec<HintParams>>,
         reference_manager: ReferenceManager,
@@ -220,7 +218,7 @@ impl Program {
     #[allow(clippy::too_many_arguments)]
     pub fn new_for_proof(
         builtins: Vec<BuiltinName>,
-        data: Vec<MaybeRelocatable>,
+        data: Vec<Felt252>,
         start: usize,
         end: usize,
         hints: HashMap<usize, Vec<HintParams>>,
@@ -271,7 +269,7 @@ impl Program {
         self.builtins.iter()
     }
 
-    pub fn iter_data(&self) -> impl Iterator<Item = &MaybeRelocatable> {
+    pub fn iter_data(&self) -> impl Iterator<Item = &Felt252> {
         self.shared_program_data.data.iter()
     }
 
@@ -384,7 +382,7 @@ impl TryFrom<CasmContractClass> for Program {
         let data = value
             .bytecode
             .iter()
-            .map(|x| MaybeRelocatable::from(Felt252::from(x.value.clone())))
+            .map(|x| Felt252::from(x.value.clone()))
             .collect();
         //Hint data is going to be hosted processor-side, hints field will only store the pc where hints are located.
         // Only one pc will be stored, so the hint processor will be responsible for executing all hints for a given pc
@@ -445,7 +443,6 @@ impl HintsCollection {
 mod tests {
     use super::*;
     use crate::serde::deserialize_program::{ApTracking, FlowTrackingData};
-    use crate::utils::test_utils::*;
     use felt::felt_str;
     use num_traits::Zero;
 
@@ -462,13 +459,13 @@ mod tests {
         };
 
         let builtins: Vec<BuiltinName> = Vec::new();
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<Felt252> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let program = Program::new(
@@ -505,13 +502,13 @@ mod tests {
         };
 
         let builtins: Vec<BuiltinName> = Vec::new();
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<Felt252> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let program = Program::new_for_proof(
@@ -551,13 +548,13 @@ mod tests {
         };
 
         let builtins: Vec<BuiltinName> = Vec::new();
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<Felt252> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let str_to_hint_param = |s: &str| HintParams {
@@ -621,13 +618,13 @@ mod tests {
 
         let builtins: Vec<BuiltinName> = Vec::new();
 
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<Felt252> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let mut identifiers: HashMap<String, Identifier> = HashMap::new();
@@ -734,12 +731,12 @@ mod tests {
 
         let builtins: Vec<_> = vec![BuiltinName::range_check, BuiltinName::bitwise];
         let data: Vec<_> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let program = Program::new(
@@ -770,13 +767,13 @@ mod tests {
         };
 
         let builtins: Vec<BuiltinName> = Vec::new();
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<_> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let program = Program::new(
@@ -802,13 +799,13 @@ mod tests {
         };
 
         let builtins: Vec<BuiltinName> = Vec::new();
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<_> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let program = Program::new(
@@ -835,13 +832,13 @@ mod tests {
 
         let builtins: Vec<BuiltinName> = Vec::new();
 
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<_> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let mut identifiers: HashMap<String, Identifier> = HashMap::new();
@@ -905,13 +902,13 @@ mod tests {
 
         let builtins: Vec<BuiltinName> = Vec::new();
 
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<_> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let mut identifiers: HashMap<String, Identifier> = HashMap::new();
@@ -969,13 +966,13 @@ mod tests {
 
         let builtins: Vec<BuiltinName> = Vec::new();
 
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<_> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let mut identifiers: HashMap<String, Identifier> = HashMap::new();
@@ -1028,13 +1025,13 @@ mod tests {
         .unwrap();
 
         let builtins: Vec<BuiltinName> = Vec::new();
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<_> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let mut identifiers: HashMap<String, Identifier> = HashMap::new();
@@ -1127,13 +1124,13 @@ mod tests {
             }),
         }];
 
-        let data: Vec<MaybeRelocatable> = vec![
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(1000),
-            mayberelocatable!(5189976364521848832),
-            mayberelocatable!(2000),
-            mayberelocatable!(5201798304953696256),
-            mayberelocatable!(2345108766317314046),
+        let data: Vec<_> = vec![
+            felt_str!("5189976364521848832"),
+            felt_str!("1000"),
+            felt_str!("5189976364521848832"),
+            felt_str!("2000"),
+            felt_str!("5201798304953696256"),
+            felt_str!("2345108766317314046"),
         ];
 
         let mut identifiers: HashMap<String, Identifier> = HashMap::new();

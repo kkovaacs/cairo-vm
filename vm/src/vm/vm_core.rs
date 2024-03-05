@@ -799,7 +799,18 @@ impl VirtualMachine {
     pub fn load_data(
         &mut self,
         ptr: Relocatable,
-        data: &Vec<MaybeRelocatable>,
+        data: &[Felt252],
+    ) -> Result<Relocatable, MemoryError> {
+        if ptr.segment_index == 0 {
+            self.instruction_cache.resize(data.len(), None);
+        }
+        self.segments.load_felts(ptr, data)
+    }
+
+    pub fn load_mayberelocatable(
+        &mut self,
+        ptr: Relocatable,
+        data: &[MaybeRelocatable],
     ) -> Result<Relocatable, MemoryError> {
         if ptr.segment_index == 0 {
             self.instruction_cache.resize(data.len(), None);
@@ -4068,7 +4079,7 @@ mod tests {
         let mut vm = vm!();
 
         let segment = vm.segments.add();
-        vm.load_data(
+        vm.load_mayberelocatable(
             segment,
             &vec![
                 mayberelocatable!(1),
@@ -4089,7 +4100,7 @@ mod tests {
         let mut vm = vm!();
 
         let segment = vm.segments.add();
-        vm.load_data(
+        vm.load_mayberelocatable(
             segment,
             &vec![
                 mayberelocatable!(1),
