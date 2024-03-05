@@ -61,12 +61,7 @@ impl MemorySegmentManager {
         ptr: Relocatable,
         data: &[Felt252],
     ) -> Result<Relocatable, MemoryError> {
-        // Starting from the end ensures any necessary resize
-        // is performed once with enough room for everything
-        for (num, value) in data.iter().enumerate().rev() {
-            self.memory.insert((ptr + num)?, value)?;
-        }
-        (ptr + data.len()).map_err(MemoryError::Math)
+        self.memory.load_felts(ptr, data)
     }
 
     ///Writes data into the memory from address ptr and returns the first address after the data.

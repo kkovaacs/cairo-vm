@@ -100,6 +100,8 @@ pub enum MemoryError {
     UnrelocatedMemory,
     #[error("Malformed public memory")]
     MalformedPublicMemory,
+    #[error("Inconsistent memory load")]
+    InconsistentMemoryLoad,
 }
 
 #[derive(Debug, PartialEq, Eq, Error)]

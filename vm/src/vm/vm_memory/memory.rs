@@ -209,6 +209,10 @@ impl MemorySegment {
         self.accessed.count_ones()
     }
 
+    fn is_present(&self, offset: usize) -> bool {
+        self.present.get(offset).map(|b| b == true).unwrap_or(false)
+    }
+
     fn relocate_addresses(&mut self, relocation_rules: &HashMap<usize, Relocatable>) {
         for i in 0..self.len() {
             if self.present[i] {
@@ -240,6 +244,43 @@ impl MemorySegment {
             segment: self,
             index: 0,
         }
+    }
+
+    pub fn load_felts(&mut self, offset: usize, data: &[Felt252]) -> Result<usize, MemoryError> {
+        if data.is_empty() {
+            return Ok(self.len());
+        }
+
+        let current_len = self.len();
+        let end = offset + data.len();
+
+        if (offset..end).any(|i| self.is_present(i)) {
+            return Err(MemoryError::InconsistentMemoryLoad);
+        }
+
+        let new_len = current_len.max(end);
+        let mut current_felt_index = self.felts.0.len();
+        let next_felt_index = current_felt_index + data.len();
+
+        self.present.resize(new_len, true);
+        self.accessed.resize(new_len, false);
+        self.felts.0.extend_from_slice(data);
+
+        // first part: overwrite already existing cells
+        for i in offset..current_len.min(end) {
+            self.cells[i] = Cell::IntIndex(current_felt_index);
+            self.present.set(i, true);
+            current_felt_index += 1;
+        }
+        if current_len < end {
+            self.cells.extend(
+                (current_felt_index..next_felt_index)
+                    .into_iter()
+                    .map(|idx| Cell::IntIndex(idx)),
+            );
+        }
+
+        Ok(end)
     }
 }
 
@@ -707,6 +748,36 @@ impl Memory {
     ) -> Option<usize> {
         let segment = self.data.get(segment_index)?;
         Some(segment.num_accessed())
+    }
+
+    pub fn load_felts(
+        &mut self,
+        ptr: Relocatable,
+        data: &[Felt252],
+    ) -> Result<Relocatable, MemoryError> {
+        if data.is_empty() {
+            return Ok(ptr);
+        }
+
+        let (value_index, _) = from_relocatable_to_indexes(ptr);
+
+        let segments = if ptr.segment_index.is_negative() {
+            &mut self.temp_data
+        } else {
+            &mut self.data
+        };
+
+        let data_len = segments.len();
+        let segment = segments
+            .get_mut(value_index)
+            .ok_or_else(|| MemoryError::UnallocatedSegment(Box::new((value_index, data_len))))?;
+
+        segment
+            .load_felts(ptr.offset, data)
+            .map(|new_offset| Relocatable {
+                segment_index: ptr.segment_index,
+                offset: new_offset,
+            })
     }
 }
 

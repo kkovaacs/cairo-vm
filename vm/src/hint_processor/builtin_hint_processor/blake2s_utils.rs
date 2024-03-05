@@ -490,11 +490,7 @@ mod tests {
         //Execute the hint
         assert_matches!(
             run_hint!(vm, ids_data, hint_code),
-            Err(HintError::Memory(
-                MemoryError::InconsistentMemory(bx)
-            )) if *bx == (Relocatable::from((2, 0)),
-                    MaybeRelocatable::from((2, 0)),
-                    MaybeRelocatable::from(Felt252::new(1795745351)))
+            Err(HintError::Memory(MemoryError::InconsistentMemoryLoad))
         );
     }
 
