@@ -50,7 +50,7 @@ fn compute_blake2s_func(vm: &mut VirtualMachine, output_ptr: Relocatable) -> Res
     let t = felt_to_u32(vm.get_integer((output_ptr - 2)?)?.as_ref())?;
     let f = felt_to_u32(vm.get_integer((output_ptr - 1)?)?.as_ref())?;
     let new_state = get_felt_array_from_u32(&blake2s_compress(&h, &message, t, 0, f, 0));
-    vm.load_data(output_ptr, &new_state)
+    vm.load_felts(output_ptr, &new_state)
         .map_err(HintError::Memory)?;
     Ok(())
 }
@@ -111,7 +111,7 @@ pub fn finalize_blake2s(
         full_padding.extend_from_slice(padding);
     }
     let data = get_felt_array_from_u32(&full_padding);
-    vm.load_data(blake2s_ptr_end, &data)
+    vm.load_felts(blake2s_ptr_end, &data)
         .map_err(HintError::Memory)?;
     Ok(())
 }
@@ -159,7 +159,7 @@ pub fn finalize_blake2s_v3(
         full_padding.extend_from_slice(padding);
     }
     let data = get_felt_array_from_u32(&full_padding);
-    vm.load_data(blake2s_ptr_end, &data)
+    vm.load_felts(blake2s_ptr_end, &data)
         .map_err(HintError::Memory)?;
     Ok(())
 }
@@ -193,7 +193,7 @@ pub fn blake2s_add_uint256(
         inner_data.push((&low >> (B * i)) & &mask);
     }
     //Insert first batch of data
-    vm.load_data(data_ptr, &inner_data)
+    vm.load_felts(data_ptr, &inner_data)
         .map_err(HintError::Memory)?;
     //Build second batch of data
     let mut inner_data = Vec::<Felt252>::new();
@@ -201,7 +201,7 @@ pub fn blake2s_add_uint256(
         inner_data.push((&high >> (B * i)) & &mask);
     }
     //Insert second batch of data
-    vm.load_data((data_ptr + 4)?, &inner_data)
+    vm.load_felts((data_ptr + 4)?, &inner_data)
         .map_err(HintError::Memory)?;
     Ok(())
 }
@@ -235,7 +235,7 @@ pub fn blake2s_add_uint256_bigend(
         inner_data.push((&high >> (B * (3 - i))) & &mask);
     }
     //Insert first batch of data
-    vm.load_data(data_ptr, &inner_data)
+    vm.load_felts(data_ptr, &inner_data)
         .map_err(HintError::Memory)?;
     //Build second batch of data
     let mut inner_data = Vec::<Felt252>::new();
@@ -243,7 +243,7 @@ pub fn blake2s_add_uint256_bigend(
         inner_data.push((&low >> (B * (3 - i))) & &mask);
     }
     //Insert second batch of data
-    vm.load_data((data_ptr + 4)?, &inner_data)
+    vm.load_felts((data_ptr + 4)?, &inner_data)
         .map_err(HintError::Memory)?;
     Ok(())
 }

@@ -796,7 +796,7 @@ impl VirtualMachine {
     }
 
     ///Writes data into the memory from address ptr and returns the first address after the data.
-    pub fn load_data(
+    pub fn load_felts(
         &mut self,
         ptr: Relocatable,
         data: &[Felt252],
@@ -807,7 +807,7 @@ impl VirtualMachine {
         self.segments.load_felts(ptr, data)
     }
 
-    pub fn load_mayberelocatable(
+    pub fn load_data(
         &mut self,
         ptr: Relocatable,
         data: &[MaybeRelocatable],
@@ -4079,7 +4079,7 @@ mod tests {
         let mut vm = vm!();
 
         let segment = vm.segments.add();
-        vm.load_mayberelocatable(
+        vm.load_data(
             segment,
             &vec![
                 mayberelocatable!(1),
@@ -4100,7 +4100,7 @@ mod tests {
         let mut vm = vm!();
 
         let segment = vm.segments.add();
-        vm.load_mayberelocatable(
+        vm.load_data(
             segment,
             &vec![
                 mayberelocatable!(1),

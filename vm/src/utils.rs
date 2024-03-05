@@ -589,7 +589,7 @@ pub mod test_utils {
             $crate::felt::felt_str!($val1, $val2)
         };
         ( $val:expr ) => {
-            $crate::felt::felt_str!($val)
+            $crate::felt::Felt252::from($val)
         };
     }
     pub(crate) use vec_data_inner;
@@ -909,7 +909,7 @@ mod test {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn data_vec_test() {
-        let data = vec_data!(("1"), (("49128305", 10)), (("3b6f00a9", 16)));
+        let data = vec_data!((1_u64), (("49128305", 10)), (("3b6f00a9", 16)));
         assert_eq!(data[0], 1.into());
         assert_eq!(data[1], 49128305.into());
         assert_eq!(data[2], 997130409.into());
